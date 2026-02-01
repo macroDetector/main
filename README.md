@@ -78,4 +78,5 @@ Manual.pptx
 # 예시용 모델
 model 경로 => app.models.weights
 
+# 영상
 [![실행 영상](https://img.youtube.com/vi/iwi31PxQc3I/0.jpg)](https://youtu.be/iwi31PxQc3I)
