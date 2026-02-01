@@ -9,6 +9,15 @@ Transformer 기반의 오토인코더(Autoencoder) 구조
 - Transformer Encoder : Multi-Head Self-Attention 메커니즘을 통해 시퀀스 전체를 동시에 훑으며, 과거의 움직임이 현재에 미치는 영향을 파악합니다.
 - Linear Decoder : 인코더가 뽑아낸 추상적인 특징들을 다시 원래의 5개 피처 차원으로 복원합니다.
 
+Detection Logic
+- Normal Patterns: The model reconstructs these with high precision, causing the reconstruction error to converge to zero.
+- Anomalous Patterns (Macro): Since these are patterns the model has not encountered during training, the reconstruction capability decreases, resulting in a high reconstruction error.
+
+- Feature Embedding: Expands the 5-dimensional input features (e.g., $x, y, dist$) into a high-dimensional vector of $d_{model}$ (64 dimensions) to prepare the model for learning complex correlations.
+- Positional Encoding: Since Transformers do not inherently process sequential order like RNNs, this adds vectors that represent the positional information ($1^{st}, 2^{nd}, \dots$) within the sequence.
+- Transformer Encoder: Utilizes the Multi-Head Self-Attention mechanism to scan the entire sequence simultaneously, capturing how past movements influence the present state.
+- Linear Decoder: Reconstructs the abstract features extracted by the encoder back into the original 5-feature dimensions.
+
 ---
 # 지원 프로그램
 - postgres
@@ -61,8 +70,8 @@ keyboard
 pip install -r requirements.txt
 ```
 
-# 사용 설명서
-사용설명서.txt
+# 사용 설명서 (Manual)
+Manual.pptx
 
-# 예시용 모델 첨부
+# 예시용 모델
 model 경로 => app.models.weights
