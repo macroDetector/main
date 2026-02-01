@@ -1,0 +1,12 @@
+pynput
+torch
+psycopg2-binary
+SQLAlchemy
+pydantic_settings
+pyautogui
+matplotlib
+numpy
+pyqtgraph 
+PySide6
+PyQt6
+keyboard
