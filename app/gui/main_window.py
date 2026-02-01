@@ -86,10 +86,12 @@ class VantageUI(QMainWindow):
         self.sidebar.setFixedWidth(280)
         side_layout = QVBoxLayout(self.sidebar)
         
-        self.logo_label = QLabel("VANTAGE")
+        # 로고 섹션
+        self.logo_label = QLabel("Controller")
         self.logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         side_layout.addWidget(self.logo_label)
 
+        # 설정 카드 섹션
         conf_group = QFrame(); conf_group.setObjectName("Card")
         conf_lay = QVBoxLayout(conf_group)
         conf_lay.addWidget(QLabel("INTERFACE SETTINGS"))
@@ -114,7 +116,26 @@ class VantageUI(QMainWindow):
         conf_lay.addWidget(self.size_slider)
         
         side_layout.addWidget(conf_group)
+
+        # --- [추가] 하단 정보 섹션으로 밀어내기 ---
         side_layout.addStretch()
+
+        info_box = QVBoxLayout()
+        info_box.setSpacing(2)
+        
+        self.author_label = QLabel("Dev by qqqqaqaqaqq")
+        self.author_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.author_label.setStyleSheet("opacity: 0.7; font-size: 11px; font-weight: normal; margin-top: 10px;")
+        
+        self.ver_label = QLabel("ver 0.0.1")
+        self.ver_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.ver_label.setStyleSheet("font-size: 12px; font-weight: bold; letter-spacing: 1px;")
+        
+        info_box.addWidget(self.author_label)
+        info_box.addWidget(self.ver_label)
+        side_layout.addLayout(info_box)
+        # ---------------------------------------
+
         self.main_layout.addWidget(self.sidebar)
 
         # --- [COL 2] 컨트롤 센터 (600px) ---
@@ -143,19 +164,17 @@ class VantageUI(QMainWindow):
             ("Start New Mouse Recording", lambda: self.handler.start_record(isUser=True, record=True))
         ]))
         
-        # 2. SYSTEM PARAMETERS (Grid Layout)
+        # 2. SYSTEM PARAMETERS
         self.scroll_layout.addWidget(self.create_combined_settings_card())
         
-        # 3. VISUAL ANALYSIS (Bot 제외, User Path 버튼만 유지)
+        # 3. VISUAL ANALYSIS
         plot_card = QFrame(); plot_card.setObjectName("Card")
         p_lay = QVBoxLayout(plot_card)
         p_lay.addWidget(QLabel("📊 VISUAL ANALYSIS"))
-        
         self.u_plot_btn = QPushButton("PLOT USER PATH")
         self.u_plot_btn.setFixedHeight(50)
         self.u_plot_btn.clicked.connect(lambda: self.handler.make_plot(user=True))
-        
-        p_lay.addWidget(self.u_plot_btn) # 버튼 직접 추가하여 누락 방지
+        p_lay.addWidget(self.u_plot_btn)
         self.scroll_layout.addWidget(plot_card)
 
         # 4. AI ENGINE 섹션
@@ -173,8 +192,18 @@ class VantageUI(QMainWindow):
         self.terminal_area = QFrame()
         term_layout = QVBoxLayout(self.terminal_area)
         term_layout.setContentsMargins(20, 40, 20, 20)
+
+        term_header_layout = QHBoxLayout()
+        term_header_layout.addWidget(QLabel("SYSTEM TERMINAL LOGS"))
         
-        term_layout.addWidget(QLabel("SYSTEM TERMINAL LOGS"))
+        # 로그 삭제 버튼 추가
+        self.clear_btn = QPushButton("CLEAR")
+        self.clear_btn.setFixedWidth(80)
+        self.clear_btn.setFixedHeight(30)
+        self.clear_btn.clicked.connect(self.clear_logs)
+        term_header_layout.addWidget(self.clear_btn)
+        
+        term_layout.addLayout(term_header_layout) # 레이아웃 추가
         self.macro_text = QTextEdit()
         self.macro_text.setReadOnly(True)
         term_layout.addWidget(self.macro_text)
@@ -201,6 +230,7 @@ class VantageUI(QMainWindow):
         self.inputs['HIDDEN'] = self.add_grid_input(grid_lay, "HIDDEN", str(globals.d_model), 1, 0)
         self.inputs['LAYERS'] = self.add_grid_input(grid_lay, "LAYERS", str(globals.num_layers), 1, 1)
         self.inputs['LR'] = self.add_grid_input(grid_lay, "LR", str(globals.lr), 2, 0)
+        self.inputs['THRES'] = self.add_grid_input(grid_lay, "THRESHOLD", str(globals.threshold), 2, 1)
         lay.addLayout(grid_lay)
 
         lay.addSpacing(10)
@@ -225,6 +255,7 @@ class VantageUI(QMainWindow):
             stride = int(self.inputs['STRIDE'].text().strip())
             hidden = int(self.inputs['HIDDEN'].text().strip())
             layers = int(self.inputs['LAYERS'].text().strip())
+            threshold = int(self.inputs['THRES'].text().strip())
             lr = float(self.inputs['LR'].text().strip())
 
             globals.SEQ_LEN = s_len
@@ -232,8 +263,9 @@ class VantageUI(QMainWindow):
             globals.d_model = hidden
             globals.num_layers = layers
             globals.lr = lr
+            globals.threshold = threshold
 
-            globals.LOG_QUEUE.put(f"[INFO] Parameters Applied: SEQ={s_len}, HIDDEN={hidden}")
+            globals.LOG_QUEUE.put(f"[INFO] Parameters Applied: SEQ={s_len}, HIDDEN={hidden}, THRES={threshold}")
 
             # .env 업데이트 로직
             env_path = ".env"
@@ -247,7 +279,7 @@ class VantageUI(QMainWindow):
             
             env_dict.update({
                 "SEQ_LEN": str(s_len), "STRIDE": str(stride),
-                "d_model": str(hidden), "num_layers": str(layers), "lr": str(lr)
+                "d_model": str(hidden), "num_layers": str(layers), "lr": str(lr), "threshold": str(threshold)
             })
             
             with open(env_path, "w", encoding="utf-8") as f:
@@ -286,6 +318,11 @@ class VantageUI(QMainWindow):
             log_msg = globals.LOG_QUEUE.get()
             self.macro_text.append(f"> {log_msg}")
 
+    def clear_logs(self):
+        """로그 텍스트 에디터를 비웁니다."""
+        self.macro_text.clear()
+        globals.LOG_QUEUE.put("🧹 Terminal logs cleared.")
+
     def closeEvent(self, event):
         """윈도우 종료 시 호출되는 완전 종료 로직"""
         print("Safely shutting down...")
@@ -310,9 +347,3 @@ class VantageUI(QMainWindow):
         event.accept()
         # 모든 스레드와 자원을 강제 해제하고 종료
         os._exit(0)
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    gui = VantageUI()
-    gui.show()
-    sys.exit(app.exec())

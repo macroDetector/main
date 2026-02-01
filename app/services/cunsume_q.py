@@ -4,6 +4,9 @@ import json
 from multiprocessing import Queue
 import app.core.globals as globals
 
+from app.db.session import SessionLocal
+from app.models.MousePoint import MousePoint
+
 def cunsume_q(record:bool, isUser:bool, log_queue:Queue = None):
     all_data = []
 
@@ -13,11 +16,10 @@ def cunsume_q(record:bool, isUser:bool, log_queue:Queue = None):
     all_data.sort(key=lambda x: x['timestamp'])
 
     if record and globals.Recorder == "postgres":
-        from app.repostitories.DBController import SessionLocal, MacroMousePoint
         db = SessionLocal()
         try:
             for item in all_data:
-                mp = MacroMousePoint(
+                mp = MousePoint(
                     timestamp=item['timestamp'], 
                     x=item['x'], 
                     y=item['y'],
