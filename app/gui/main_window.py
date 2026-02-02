@@ -255,7 +255,7 @@ class VantageUI(QMainWindow):
             stride = int(self.inputs['STRIDE'].text().strip())
             hidden = int(self.inputs['HIDDEN'].text().strip())
             layers = int(self.inputs['LAYERS'].text().strip())
-            threshold = int(self.inputs['THRES'].text().strip())
+            threshold = float(self.inputs['THRES'].text().strip())
             lr = float(self.inputs['LR'].text().strip())
 
             globals.SEQ_LEN = s_len
