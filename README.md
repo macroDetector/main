@@ -25,7 +25,7 @@ Detection Logic
 - CLI Mode Expansion: Inference Mode now officially supports both Windows CMD and Linux Terminal environments.
 - Portable Release: Executables are now bundled and provided as ZIP archives via PyInstaller for easy deployment.
 
-![Cmdupdate](./publid/Cmdupdate.png)
+![Cmdupdate](./public/Cmdupdate.png)
 
 Start => inference Mode => yes
 UI => inference Mode => No
