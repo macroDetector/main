@@ -14,48 +14,58 @@ from multiprocessing import Queue
 from multiprocessing import Process
     
 from app.utilites.points_to_features import points_to_features
+from multiprocessing import Event
 
-def inferece_plot_main(chart_queue: Queue, features, threshold):
+def inferece_plot_main(chart_queue: Queue, features, threshold, stop_event=None):
     import sys
     from app.services.RealTimeMonitor import RealTimeMonitor
-    from PyQt6.QtCore import QTimer # PySide6 -> PyQt6
+    from PyQt6.QtCore import QTimer
     
+    if stop_event is None:
+        from multiprocessing import Event
+        stop_event = Event()
+
     monitor = RealTimeMonitor(features, threshold)
     
     def update():
-        while not chart_queue.empty():
-            try:
+        # 1. 큐 확인보다 '중지 이벤트'를 최우선으로 체크
+        if stop_event.is_set():
+            timer.stop()
+            monitor.app.quit()
+            return
+
+        # 2. 파이프가 깨졌을 때(BrokenPipe)를 대비한 try-except 강화
+        try:
+            # empty() 호출 시에도 파이프 에러가 날 수 있으므로 안으로 밀어넣음
+            while not chart_queue.empty():
                 data = chart_queue.get_nowait()
                 monitor.update_view(data[0], data[1])
-            except:
-                break
+        except (EOFError, BrokenPipeError, ConnectionResetError):
+            # 메인 프로세스가 죽어서 파이프가 끊긴 경우
+            timer.stop()
+            monitor.app.quit()
+        except Exception:
+            # 기타 큐가 비어있는 등의 예외는 무시하고 계속 진행
+            pass
                 
     timer = QTimer()
     timer.timeout.connect(update)
     timer.start(16) 
     
-    # PyQt6에서는 exec()를 권장 (exec_도 되지만 통일성 위해)
     sys.exit(monitor.app.exec())
-
 class MacroDetector:
-    def __init__(self, model_path: str, seq_len=globals.SEQ_LEN, threshold=0.8, device=None):
+    def __init__(self, model_path: str, seq_len=globals.SEQ_LEN, threshold=0.8, device=None, chart_Show=True, stop_event=None):
         self.seq_len = seq_len
         self.threshold = threshold
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
 
-        # daemon 안에 daemon은 못 만듦
-        self.plot_proc = Process(
-            target=inferece_plot_main,
-            args=(
-                globals.CHART_DATA, 
-                globals.FEATURES, 
-                self.threshold
-            ),
-            daemon=False
-        )
+        self.stop_event = stop_event
+        if not self.stop_event:
+            self.stop_event = Event()
 
-        self.plot_proc.start()
-            
+        self.chart_Show = chart_Show
+        self.plot_proc = None
+
         # ===== 모델 초기화 =====
         self.model = TransformerMacroAutoencoder(
             input_size=len(globals.FEATURES),
@@ -75,6 +85,26 @@ class MacroDetector:
         # ===== 좌표 buffer =====
         self.buffer = deque(maxlen=seq_len * 3)
         self.prev_speed = 0.0
+
+    def start_plot_process(self):
+        if not self.chart_Show:
+            return
+
+        if self.plot_proc and self.plot_proc.is_alive():
+            return
+
+        from multiprocessing import Process
+        self.plot_proc = Process(
+            target=inferece_plot_main,
+            args=(
+                globals.CHART_DATA,
+                globals.FEATURES,
+                self.threshold,
+                self.stop_event
+            ),
+            daemon=False
+        )
+        self.plot_proc.start()
 
     def push(self, data:dict):
         self.buffer.append((data.get('x'), data.get('y'), data.get('timestamp'), data.get('deltatime')))

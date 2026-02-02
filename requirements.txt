@@ -1,5 +1,5 @@
-pynput
 torch
+pynput
 psycopg2-binary
 SQLAlchemy
 pydantic_settings

@@ -1,5 +1,4 @@
 import os
-import sys
 import keyboard
 
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
@@ -33,7 +32,7 @@ class VantageUI(QMainWindow):
         super().__init__()
         self.inputs = {}
         self.font_family = "Segoe UI"
-        self.font_size = 10
+        self.font_size = 12
         self.current_theme = "dark"
         
         # 중단 이벤트 및 핸들러 설정

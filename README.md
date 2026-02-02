@@ -21,6 +21,18 @@ Detection Logic
 ![Architecture Diagram](./public/Architecture.png)
 
 ---
+# Update
+- CLI Mode Expansion: Inference Mode now officially supports both Windows CMD and Linux Terminal environments.
+- Portable Release: Executables are now bundled and provided as ZIP archives via PyInstaller for easy deployment.
+
+![Cmdupdate](./publid/Cmdupdate.png)
+
+Start => inference Mode => yes
+UI => inference Mode => No
+
+Quit => ctrl + shift + q
+
+---
 # 지원 프로그램
 - postgres
 - json
@@ -33,11 +45,11 @@ Detection Logic
 Recorder=json
 
 # posgres를 사용 시 기입
-DB_HOST=-
-DB_USER=-
-DB_PASSWORD=-
-DB_NAME=-
-DB_PORT=-
+DB_HOST=localhost
+DB_USER=postgres
+DB_PASSWORD=your_password
+DB_NAME=your_db_name
+DB_PORT=0000
 
 # 필수 입력
 SEQ_LEN=100

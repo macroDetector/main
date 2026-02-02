@@ -8,16 +8,25 @@ from multiprocessing import Queue
 from app.services.macro_dectector import MacroDetector
 from multiprocessing import Event
 
-def main(stop_event=None, log_queue:Queue=None):
+def main(stop_event=None, log_queue:Queue=None, chart_Show=True):
     if stop_event is None:
         stop_event = Event()
 
     detector = MacroDetector(
         model_path=globals.save_path,
         seq_len=globals.SEQ_LEN,
-        threshold=globals.threshold
+        threshold=globals.threshold,
+        chart_Show=chart_Show,
+        stop_event=stop_event
     )
-    log_queue.put("🟢 Macro Detector Running")
+
+    detector.start_plot_process()
+    
+    if log_queue:
+        log_queue.put("🟢 Macro Detector Running")
+    else:
+        print("🟢 Macro Detector Running")
+
     mouse_controller = Controller()
 
     pre_x = None
@@ -54,10 +63,18 @@ def main(stop_event=None, log_queue:Queue=None):
 
         if result:
             if result["is_human"]:
-                log_queue.put(f"🙂 HUMAN | prob={result['prob']:.3f}")
+                if log_queue:
+                    log_queue.put(f"🙂 HUMAN | prob={result['prob']:.3f}")
+                else:
+                    print(f"🙂 HUMAN | prob={result['prob']:.3f}")
             else:
-                log_queue.put(f"🚨 MACRO | prob={result['prob']:.3f}")
-
-    log_queue.put("🛑 Macro Detector Stopped")
+                if log_queue:
+                    log_queue.put(f"🚨 MACRO | prob={result['prob']:.3f}") 
+                else:
+                    print(f"🚨 MACRO | prob={result['prob']:.3f}") 
+    if log_queue:
+        log_queue.put("🛑 Macro Detector Stopped")
+    else:
+        print("🛑 Macro Detector Stopped")
 
     stop_event.set()    

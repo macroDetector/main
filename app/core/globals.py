@@ -1,3 +1,5 @@
+import os
+import sys
 import queue
 from app.core.settings import settings
 
@@ -34,8 +36,15 @@ LOG_QUEUE = None
 CHART_DATA = None
 TRAIN_DATA = None
 
-save_path = "app/models/weights/mouse_macro_lstm_best.pt"
-scaler_path = "app/models/weights/scaler.pkl"
+def get_resource_path(relative_path):
+    """빌드 환경과 개발 환경의 경로 차이를 해결합니다."""
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
+
+# --- 이제 모든 경로를 이 함수로 감싸세요 ---
+save_path = get_resource_path("app/models/weights/mouse_macro_lstm_best.pt")
+scaler_path = get_resource_path("app/models/weights/scaler.pkl")
 
 def init_manager():
     global LOG_QUEUE

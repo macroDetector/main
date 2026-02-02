@@ -1,10 +1,8 @@
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import pandas as pd
-import traceback
 import time
 
 
@@ -22,9 +20,6 @@ import app.repostitories.JsonController as JsonController
 
 from app.services.indicators import indicators_generation
 from multiprocessing import Queue
-
-from multiprocessing import Process
-from multiprocessing import Event
 
 from app.utilites.make_df_from_points import make_df_from_points
 from app.utilites.points_to_features import points_to_features
@@ -62,19 +57,27 @@ class TrainMode():
         self.seq_len=globals.SEQ_LEN
         self.log_queue:Queue=log_queue
 
+        self.plot_proc = None
+
+
+    def start_plot_process(self):
+        if self.plot_proc is not None and self.plot_proc.is_alive():
+            return
+
+        from multiprocessing import Process
         self.plot_proc = Process(
             target=train_plot_main,
-            args=(
-                globals.TRAIN_DATA, 
-            ),
+            args=(globals.TRAIN_DATA,),
             daemon=False
         )
         self.plot_proc.start()
-
+        
     # train
     def train_start(self, train_dataset, val_dataset, batch_size=globals.batch_size, epochs=2000, lr=globals.lr,
                     device=None, model=None, stop_event=None, patience=20, log_queue=None, save_path="best_model.pth"):
         
+        self.start_plot_process()
+
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
         val_loader   = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
