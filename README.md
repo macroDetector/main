@@ -20,68 +20,91 @@ Detection Logic
 
 ![Architecture Diagram](./public/Architecture.png)
 
+---
 # 🚀 Macro Detector Update Ver 0.0.2
 
-A high-precision, AI-powered mouse movement analyzer designed to distinguish between organic human input and synthetic macro patterns through OS-level event tracking and Temporal Feature Engineering.
+## 🛠 주요 기능 및 개선 사항 (Key Features & Enhancements)
+
+### 1. 물리 기반 고정밀 트래킹 (High-Fidelity Physics-Based Tracking)
+기존의 고정 시간 샘플링 방식에서 벗어나, 하드웨어의 실제 움직임을 포착하는 **Event-driven** 모델로 마이그레이션되었습니다.
+* **OS 레벨 이벤트 리스너:** `pynput.mouse.Listener`를 통해 하드웨어 인터럽트를 직접 수신합니다.
+    * **Old:** 0.02s (feat tolerance) 간격의 강제 샘플링 (디지털적으로 정형화된 데이터)
+    * **New:** 마우스가 움직일 때마다 발생하는 실제 $\Delta t$ (예: 0.0209s)를 기록하여 **"Physical Truth"**를 확보합니다.
+* **영향:** 인간 특유의 미세한 가속도 곡선, 유기적인 타이밍 변화, 그리고 물리적 지터(Jitter)를 보존하여 AI의 판별력을 극대화합니다. 
+* **웹페이지:** 웹페이지 특유의 16.66ms 를 고려하여 설계되었습니다.
+* **Tolerance** UI 내 최소 간격을 조정할 수 있습니다.
+
+### 2. 피처 엔지니어링 고도화 (Feature Engineering)
+단순 좌표 분석을 넘어, 물리 법칙을 적용한 다차원 변수를 추출합니다.
+* **운동 파생 변수:** 고정밀 타임스탬프를 기반으로 다음 지표를 산출합니다.
+    * **Velocity (속도)**, **Acceleration (가속도)**, **Jerk (가속도 변화율)** 등
+* **엔트로피 분석:** 매크로의 선형적 움직임과 대비되는 인간의 '유기적 불규칙성'을 수치화하여 피처 공간(Feature Space)을 확장했습니다.
+
+### 3. 자동화된 모델 최적화 (Automated Optimization)
+환경에 구애받지 않는 범용 탐지를 위해 판단 로직을 자동화했습니다.
+* **Auto-Threshold:** 학습 데이터의 분포를 분석하여 최적의 탐지 임계값을 자동으로 설정합니다. 추론시 임계값의 1.05배 기준으로 계산됩니다.
+* **Post-Analysis Mode:** 실시간 탐지 외에도 기존에 저장된 JSON 로그를 분석하는 포렌식 기능을 지원합니다.
+* **중앙 관리 구조:** `config.json`을 통해 모든 하이퍼파라미터를 통합 관리합니다.
+
+### 4. 시스템 안정성 강화 (Resilience & Stability) 🛡️
+* **Asynchronous Queue:** 데이터 수집과 추론 로직을 분리하여 CPU 부하 상황에서도 마우스 끊김(Stuttering)이 발생하지 않습니다.
+* **Protection Mode:** 시스템 권한 창(작업 관리자 등) 접근 시에도 충돌 없이 기록을 유지하는 Fail-safe 프로토콜을 적용했습니다.
+
+
+## ✨ UI/UX 개선
+* **Dark-themed UI:** 시각적 가독성을 높인 현대적 디자인.
+* **Tray Integration:** 백그라운드 구동을 위한 시스템 트레이 아이콘 지원.
+* **Real-time Feedback:** 감지 시 사이렌 아이콘과 함께 실시간 확률(%) 출력.
+
+---
+# 🚀 Macro Detector Update Ver 0.0.2
 
 ## 🛠 Key Features & Enhancements
 
 ### 1. High-Fidelity Physics-Based Tracking
-* **Actual Physics Logic:** Migrated from a fixed-interval polling system to an **OS-level Event Listener** (`pynput.mouse.Listener`).
-    * **Old:** Captured data at forced 0.02s intervals (Digitized/Artificial).
-    * **New:** Captures the "Physical Truth" by recording high-precision $\Delta t$ (e.g., 0.0209s) between hardware interrupts.
-* **Enhanced Precision & Filtering:** Introduced configurable **Tolerance** settings and **Temporal Filtering** to ensure inference stability across various hardware environments (Low/High Hz).
-* **Impact:** Preserves human-centric micro-timing dynamics, acceleration curves, and organic jitter.
-
-### 2. Feature Diversity & Engineering (피쳐 다양성 확보) 🌟
-* **Multidimensional Movement Analysis:** Beyond simple coordinates, the system now extracts a diverse set of features including **Velocity, Acceleration, and Jerk** based on high-precision timing.
-* **Entropy & Jitter Detection:** Captured organic human micro-oscillations (jitter) to increase the feature space, allowing the AI to better understand the "chaos" of human movement vs. the "linearity" of macros.
-* **Refined Metrics:** Improved calculation of motion derivatives:
-    * Acceleration: $a = \Delta v / \Delta t$
-    * Jerk: $j = \Delta a / \Delta t$
-
-### 3. Automated Model Optimization (학습 및 임계값 자동화) 🤖
-* **Training Optimization:** Increased Epochs from **50 to 300** and transitioned the loss function to **MSE (Mean Squared Error)** for superior convergence.
-* **Auto-Threshold Calculation:** Implemented an automated threshold logic during the training phase. The system now **automatically calculates the optimal Threshold** based on the training data distribution, minimizing manual tuning.
-* **Post-Analysis Mode:** Added **JSON Data Inference** to analyze existing logs for post-event forensics.
-* **Centralized Architecture:** All hyperparameters and the auto-derived threshold are managed via `config.json`.
-
-### 4. System Resilience & Stability (안정성 강화) 🛡️
-* **Asynchronous Data Handling:** Separated the Listener (Data Capture) from the Main Loop (Inference) using a **Queue-based architecture**. This eliminates mouse stuttering and ensures performance even under high CPU load.
-* **Protection Mode (Fail-Safe):** Integrated a protocol to maintain recording stability and prevent crashes when interacting with restricted system windows (e.g., Task Manager).
-* **Robust Exception Handling:** Enhanced error management for file I/O operations (config/weights) and hardware interrupt interruptions.
-
-### 5. Model & Inference Upgrade
-* **Training Optimization:** Increased Epochs from **50 to 300** and transitioned the loss function to **MSE (Mean Squared Error)** for superior convergence.
-* **Post-Analysis Mode:** Added **JSON Data Inference** to analyze existing logs for post-event forensics.
-* **Centralized Architecture:** All hyperparameters are now managed via a single `config.json`.
+Migrated from fixed-interval polling to an **OS-level Event-driven** model to capture the "Physical Truth" of hardware input.
+* **OS-Level Event Listener:** Utilizes `pynput.mouse.Listener` to receive direct hardware interrupts.
+    * **Old:** Forced sampling at 0.02s intervals (Digitized/Synthetic data).
+    * **New:** Records high-precision $\Delta t$ (e.g., 0.0209s) for every hardware event.
+* **Web-Optimized Design:** Specifically engineered to account for the $16.66ms$ refresh cycles (60Hz) typical of web environments.
+* **Configurable Tolerance:** Added a UI-based setting to adjust the minimum temporal interval (Tolerance) for stable inference.
+* **Impact:** Preserves human-centric micro-timing, organic acceleration curves, and physical jitter—critical factors for AI-based differentiation.
 
 
-## ✨ UI & UX Improvements
-* **Refined Interface:** Modernized dark-themed UI components.
-* **Interactive Tooltips:** 1-second delay hint system for all dashboard parameters.
-* **Tray Integration:** "Minimize to Tray" support for seamless background monitoring.
-* **Enhanced Logging:** Real-time detection output with siren emojis and probability percentages.
 
+### 2. Advanced Feature Engineering
+Extracts multi-dimensional variables by applying laws of physics to raw coordinate data.
+* **Motion Derivatives:** Calculates high-precision metrics based on precise timestamps:
+    * **Velocity ($v$)**, **Acceleration ($a$)**, **Jerk ($j$ - rate of change of acceleration)**.
+* **Entropy & Jitter Analysis:** Quantifies "organic irregularity" vs. the "linear rigidity" of macros to expand the feature space.
 
-## 🔴 Critical Fix: Event-Driven Architecture
-The transition from a Polling-loop to an **Event-driven** model solves the "stuttering" issue and prevents critical data loss. 
+### 3. Automated Model Optimization
+Standardized detection logic to ensure universal performance across different hardware environments.
+* **Auto-Threshold Calculation:** Automatically determines the optimal detection threshold based on training data distribution. During inference, the system operates on a $1.05\times$ threshold margin.
+* **Post-Analysis Mode:** Supports JSON data inference for forensic analysis of pre-recorded logs.
+* **Centralized Configuration:** All hyperparameters and derived thresholds are managed via a single `config.json` file.
 
+### 4. System Resilience & Stability 🛡️
+* **Asynchronous Queue Architecture:** Decouples the Listener (Capture) from the Main Loop (Inference), eliminating mouse stuttering even under high CPU load.
+* **Protection Mode (Fail-Safe):** Integrated protocols to maintain stable recording and prevent crashes when interacting with restricted system windows (e.g., Task Manager).
+
+---
+
+## ✨ UI/UX Improvements
+* **Modern Dark Theme:** Refined dashboard with a focus on visual clarity and reduced eye strain.
+* **System Tray Integration:** Added "Minimize to Tray" support for seamless background monitoring.
+* **Real-time Detection Feedback:** Instant visual alerts using siren emojis and real-time probability percentages (%).
+
+---
+
+## 📊 Quick Comparison
 
 | Feature | Polling System (Old) | Event Listener (New) |
 | :--- | :--- | :--- |
-| **Trigger** | Clock Timer (Fixed) | Physical Hardware Interrupt |
-| **Time Delta** | Normalized (Forced 0.02s) | Raw High-Precision (Actual Physics) |
+| **Trigger** | Clock Timer (Fixed) | Hardware Interrupt (Physical) |
+| **Time Delta ($\Delta t$)** | Normalized (Forced 0.02s) | Raw High-Precision (Actual Physics) |
 | **Data Quality** | Lossy / Synthetic | High-Fidelity / Organic |
-| **Human Jitter** | Smoothed out (Filtered) | Captured accurately (Essential for AI) |
-
-## 🚀 How to Run
-1. **Configure:** Edit `config.json` to set your desired `tolerance`, `threshold`, and `seq_len`.
-2. **Record/Detect:**
-    * Use **Move_Data** to record new human patterns.
-    * Run the **Macro Detector** for real-time monitoring.
-    * Use **Json Data Inference** to analyze saved `.json` files.
-3. **Train:** Run the training module to update the model with your custom MSE-based weights.
+| **Human Jitter** | Smoothed Out (Filtered) | **Captured Accurately (Essential for AI)** |
 
 ---
 
