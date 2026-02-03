@@ -27,31 +27,40 @@ A high-precision, AI-powered mouse movement analyzer designed to distinguish bet
 ## 🛠 Key Features & Enhancements
 
 ### 1. High-Fidelity Physics-Based Tracking
-* **Enhanced Precision (Tolerance):** Introduced configurable tolerance settings for high-resolution sampling.
-* **Temporal Filtering:** Ensures inference stability across various hardware environments (Low/High Hz) by stabilizing the data entry intervals.
 * **Actual Physics Logic:** Migrated from a fixed-interval polling system to an **OS-level Event Listener** (`pynput.mouse.Listener`).
     * **Old:** Captured data at forced 0.02s intervals (Digitized/Artificial).
     * **New:** Captures the "Physical Truth" by recording high-precision $\Delta t$ (e.g., 0.0209s) between hardware interrupts.
-    * **Impact:** Preserves human-centric micro-timing dynamics, acceleration curves, and organic jitter.
+* **Enhanced Precision & Filtering:** Introduced configurable **Tolerance** settings and **Temporal Filtering** to ensure inference stability across various hardware environments (Low/High Hz).
+* **Impact:** Preserves human-centric micro-timing dynamics, acceleration curves, and organic jitter.
 
-### 2. Model & Inference Upgrade
-* **Training Optimization:** Increased Epochs from **50 to 300** and transitioned the loss function to **MSE (Mean Squared Error)** for superior convergence on regression tasks.
-* **Post-Analysis Mode:** Added **JSON Data Inference**. You can now record mouse data and run the detector on saved `.json` files for post-event forensics.
-* **Protection Mode:** Integrated a fail-safe protocol to maintain system stability and prevent crashes when interacting with restricted windows (e.g., Task Manager).
+### 2. Feature Diversity & Engineering (피쳐 다양성 확보) 🌟
+* **Multidimensional Movement Analysis:** Beyond simple coordinates, the system now extracts a diverse set of features including **Velocity, Acceleration, and Jerk** based on high-precision timing.
+* **Entropy & Jitter Detection:** Captured organic human micro-oscillations (jitter) to increase the feature space, allowing the AI to better understand the "chaos" of human movement vs. the "linearity" of macros.
+* **Refined Metrics:** Improved calculation of motion derivatives:
+    * Acceleration: $a = \Delta v / \Delta t$
+    * Jerk: $j = \Delta a / \Delta t$
 
-### 3. Centralized Architecture
-* **Config Management:** All hyperparameters and environment variables are now managed via `config.json`.
-* **Feature Engineering:** Improved calculation of **Acceleration** ($a = \Delta v / \Delta t$) and **Jerk** ($j = \Delta a / \Delta t$) by utilizing the new high-precision delta time values.
+### 3. System Resilience & Stability (안정성 강화) 🛡️
+* **Asynchronous Data Handling:** Separated the Listener (Data Capture) from the Main Loop (Inference) using a **Queue-based architecture**. This eliminates mouse stuttering and ensures performance even under high CPU load.
+* **Protection Mode (Fail-Safe):** Integrated a protocol to maintain recording stability and prevent crashes when interacting with restricted system windows (e.g., Task Manager).
+* **Robust Exception Handling:** Enhanced error management for file I/O operations (config/weights) and hardware interrupt interruptions.
+
+### 4. Model & Inference Upgrade
+* **Training Optimization:** Increased Epochs from **50 to 300** and transitioned the loss function to **MSE (Mean Squared Error)** for superior convergence.
+* **Post-Analysis Mode:** Added **JSON Data Inference** to analyze existing logs for post-event forensics.
+* **Centralized Architecture:** All hyperparameters are now managed via a single `config.json`.
+
 
 ## ✨ UI & UX Improvements
-* **Refined Interface:** Modernized UI components with a professional dark-themed aesthetic.
-* **Interactive Tooltips:** Added a 1-second delay hint system for all dashboard parameters.
+* **Refined Interface:** Modernized dark-themed UI components.
+* **Interactive Tooltips:** 1-second delay hint system for all dashboard parameters.
 * **Tray Integration:** "Minimize to Tray" support for seamless background monitoring.
-* **Enhanced Logging:** Real-time macro detection output with siren emojis and probability percentages for better visibility.
+* **Enhanced Logging:** Real-time detection output with siren emojis and probability percentages.
 
 
 ## 🔴 Critical Fix: Event-Driven Architecture
-The transition from a Polling-loop to an **Event-driven** model solves the "stuttering" issue and data loss. 
+The transition from a Polling-loop to an **Event-driven** model solves the "stuttering" issue and prevents critical data loss. 
+
 
 | Feature | Polling System (Old) | Event Listener (New) |
 | :--- | :--- | :--- |
@@ -60,14 +69,13 @@ The transition from a Polling-loop to an **Event-driven** model solves the "stut
 | **Data Quality** | Lossy / Synthetic | High-Fidelity / Organic |
 | **Human Jitter** | Smoothed out (Filtered) | Captured accurately (Essential for AI) |
 
-
 ## 🚀 How to Run
-1.  **Configure:** Edit `config.json` to set your desired `tolerance`, `threshold`, and `seq_len`.
-2.  **Record/Detect:**
+1. **Configure:** Edit `config.json` to set your desired `tolerance`, `threshold`, and `seq_len`.
+2. **Record/Detect:**
     * Use **Move_Data** to record new human patterns.
     * Run the **Macro Detector** for real-time monitoring.
-    * Use **Json Data Inference** to analyze existing logs.
-3.  **Train:** Run the training module to update the model with your custom MSE-based weights.
+    * Use **Json Data Inference** to analyze saved `.json` files.
+3. **Train:** Run the training module to update the model with your custom MSE-based weights.
 
 ---
 
