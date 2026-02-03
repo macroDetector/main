@@ -25,6 +25,12 @@ class Settings(BaseSettings):
     batch_size: int = 64
     lr: float = 0.0005
     CLIP_BOUNDS: dict = {}
+    n_head: int = 4
+
+    epoch:int = 100
+    patience:int = 10
+    weight_decay:float = 0.5
+    dim_feedforward:int = 128
 
     @property
     def DATABASE_URL(self) -> str:

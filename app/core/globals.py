@@ -2,6 +2,9 @@ import os
 import sys
 import queue
 from app.core.settings import settings
+from multiprocessing import Lock
+
+lock = Lock()
 
 MOUSE_QUEUE = queue.Queue()
 
@@ -13,12 +16,30 @@ SEQ_LEN = settings.SEQ_LEN
 STRIDE = settings.STRIDE
 
 FEATURES = [
-    "speed",         # 이동 속도
-    "acc",           # 가속도
-    "jerk",          # 가속도의 변화 (보간법 판별 핵심 1)
-    "turn",          # 회전 각도 (방향 전환)
-    "jerk_std",      # jerk의 일정함 (보간법의 수학적 완벽함 포착)
-    "straightness"   # 직선도 (함수 기반 곡선 vs 유저의 미세 수정 비교)
+    # 1. 시간적 특성 (Time Dynamics)
+    "deltatime",          # 입력 간격
+    "dt_cv",              # 시간 간격의 변동성 (기계는 일정함)
+
+    # 2. 이동 물리량 (Magnitude)
+    "dist",               # 이동 거리
+    "speed",              # 속도
+    "acc",                # 가속도
+    "jerk",               # 가속도의 변화 (기계와 사람의 가장 큰 차이)
+
+    # 3. 인간 특유의 미세 노이즈 (Jitter)
+    "micro_shaking",      # 미세 떨림 (사람은 0이 될 수 없음)
+    "jerk_flip_rate",     # 가속도 방향 전환 빈도 (부르르 떨리는 정도)
+
+    # 4. 방향 및 회전 (Directional)
+    "turn",               # 회전 각도
+    "ang_vel",            # 각속도
+    "ang_acc",            # 각가속도 (곡선을 그릴 때의 매끄러움)
+
+    # 5. 경로의 효율성 및 통계 (Statistical)
+    "straightness",       # 직선성 (매크로는 완벽한 1.0에 수렴)
+    "efficiency_var",     # 경로 효율의 변화량 (인간의 보정 동작 탐지)
+    "speed_var",          # 속도 분산
+    "acc_smoothness"      # 가속도의 일정함 (매크로 탐지 핵심)
 ]
 
 LAST_EVENT_TS:float = 0.0
@@ -37,7 +58,16 @@ dropout=settings.dropout
 batch_size=settings.batch_size
 lr=settings.lr
 tolerance=settings.tolerance
+n_head=settings.n_head
+
+epoch = settings.epoch
+patience = settings.patience
+weight_decay = settings.weight_decay
+dim_feedforward = settings.dim_feedforward
+
 CLIP_BOUNDS = settings.CLIP_BOUNDS
+
+GLOBAL_CHANGE = False
 
 LOG_QUEUE = None
 CHART_DATA = None

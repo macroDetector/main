@@ -30,6 +30,12 @@ Detection Logic
 * **Centralized Configuration:** Migrated initial setup parameters to `config.json` for easier environment and hyperparameter management.
 * **Refined Detection Output:** Updated the Macro Detection UI and log format for enhanced readability and real-time monitoring.
 
+Start New Mouse Recording feat Macro_Data 기능 추가 macro data
+Json Data Inference 기록된 json 파일로 검사
+여러 가지 조정할수 있는 값들 패널에 부착
+plot ui 변경
+
+
 ### 🔴 Critical Fixes
 
 * **Event-Driven Movement Tracking & Physical Delta Logic**

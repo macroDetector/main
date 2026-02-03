@@ -7,6 +7,7 @@ import time
 import numpy as np
 import json
 
+
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import RobustScaler
 
@@ -28,27 +29,22 @@ from app.utilites.save_confing import update_parameters
 
 def train_plot_main(train_queue: Queue):
     import sys
-    from app.services.RealTimeMonitor import TrainMonitor 
+    from app.services.RealTimeMonitor import TrainMonitor
     from PyQt6.QtCore import QTimer
-    
-    monitor = TrainMonitor(window_size=1000) # Epoch 수에 맞춰 조절
-    
+
+    monitor = TrainMonitor(window_size=1000)
+
     def update():
-        # 큐에 쌓인 모든 데이터를 한 번에 처리하여 딜레이 방지
         while not train_queue.empty():
-            try:
-                data = train_queue.get_nowait()
-                # data format: (avg_train_loss, avg_val_loss)
-                monitor.update_view(data[0], data[1])
-            except Exception as e:
-                print(f"Update error: {e}")
-                break
-                
+            epoch, train_loss, val_loss = train_queue.get_nowait()
+            monitor.update_view(epoch, train_loss, val_loss)
+
     timer = QTimer()
     timer.timeout.connect(update)
-    timer.start(100) # 그래프 업데이트 주기 (ms)
-    
+    timer.start(100)
+
     sys.exit(monitor.app.exec())
+
 
 class TrainMode():
     def __init__(self, stop_event=None, log_queue:Queue=None):
@@ -72,23 +68,28 @@ class TrainMode():
             daemon=False
         )
         self.plot_proc.start()
-        
+
     # train
     def train_start(self, train_dataset, val_dataset, batch_size=g_vars.batch_size, epochs=2000, lr=g_vars.lr,
                     device=None, model=None, stop_event=None, patience=20, log_queue=None, save_path="best_model.pth"):
         try:
+            log_queue.put(f"lr : {lr}, batch_size : {batch_size}")
             self.start_plot_process()
 
             train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
             val_loader   = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
             criterion = nn.MSELoss()
-            optimizer = optim.Adam(model.parameters(), lr=lr)
+            optimizer = torch.optim.AdamW(
+                model.parameters(), 
+                lr=lr,
+                weight_decay=g_vars.weight_decay
+            )
 
             best_val_loss = float('inf')
             epochs_no_improve = 0
-            
-            # 추천 임계치를 저장할 변수
+            # 5% 개선을 기준으로 설정 (필요에 따라 0.05 ~ 0.20 조절)
+            min_improvement_factor = 0.05 
             recommended_base_threshold = 0.0
 
             for epoch in range(epochs):
@@ -114,66 +115,74 @@ class TrainMode():
                 # ===== Validation Phase =====
                 model.eval()
                 total_val_loss = 0
-                all_val_errors = [] # 샘플별 개별 에러 수집용 리스트
+                all_val_errors = [] 
 
                 with torch.no_grad():
                     for batch_x in val_loader:
                         batch_x = batch_x.to(device)
                         outputs = model(batch_x)
                         
-                        # 1. 평균 Loss 계산 (기존 유지)
                         loss = criterion(outputs, batch_x)
                         total_val_loss += loss.item() * batch_x.size(0)
                         
-                        # 2. 샘플별 개별 MAE 에러 수집 (임계치 예측용)
-                        # outputs/batch_x: (Batch, Seq_len, Features)
-                        # 각 샘플별로 모든 차원의 평균 절대 오차를 구함
-                        sample_errors = torch.abs(outputs - batch_x).mean(dim=(1, 2))
+                        # MSE 기반 임계치 계산용 데이터 수집
+                        sample_errors = torch.mean((outputs - batch_x)**2, dim=(1, 2)) 
                         all_val_errors.extend(sample_errors.cpu().numpy())
 
                 avg_val_loss = total_val_loss / len(val_dataset)
-
-                # 3. 임계치 통계 계산 (상위 99.7% 지점 추출)
-                # 이 값은 "정상 데이터 중 가장 튀는 놈들"의 기준선이 됩니다.
                 current_epoch_threshold = np.percentile(all_val_errors, 99.7)
 
-                # ===== Logging & Early Stopping =====
+                # ===== Logging & Early Stopping Logic =====
                 status_msg = f"Epoch {epoch+1}/{epochs} | Train: {avg_train_loss:.6f} | Val: {avg_val_loss:.6f} | Est.Thresh: {current_epoch_threshold:.6f}"
-
-                if g_vars.TRAIN_DATA is not None:
-                    g_vars.TRAIN_DATA.put((float(avg_train_loss), float(avg_val_loss)))
-
                 if log_queue: log_queue.put(status_msg)
 
-                if avg_val_loss < best_val_loss:
+                # 시각화 데이터 큐 전달
+                if g_vars.TRAIN_DATA is not None:
+                   g_vars.TRAIN_DATA.put((epoch + 1, float(avg_train_loss), float(avg_val_loss)))
+
+                # 개선율 계산
+                improvement = 0
+                if best_val_loss != float('inf'):
+                    improvement = (best_val_loss - avg_val_loss) / best_val_loss
+
+                # [핵심 로직] 첫 에포크이거나, 개선율이 기준치 이상일 때
+                if best_val_loss == float('inf') or improvement >= min_improvement_factor:
+                    is_initial = (best_val_loss == float('inf'))
                     best_val_loss = avg_val_loss
-                    recommended_base_threshold = current_epoch_threshold # 최적 모델일 때의 임계치 기억
+                    recommended_base_threshold = current_epoch_threshold
                     epochs_no_improve = 0
                     torch.save(model.state_dict(), save_path)
-                    if log_queue: log_queue.put(f"  >> [Model Saved] Best Val Loss: {best_val_loss:.6f}")
+                    
+                    if log_queue:
+                        msg = "First Best" if is_initial else f"Improvement {improvement*100:.1f}%"
+                        log_queue.put(f" >> [Model Saved] {msg} | Loss: {best_val_loss:.6f}")
                 else:
                     epochs_no_improve += 1
+                    if log_queue:
+                        log_queue.put(f" >> [No Significant Improve] Count: {epochs_no_improve}/{patience} (Improv: {improvement*100:.1f}%)")
+                    
                     if epochs_no_improve >= patience:
-                        if log_queue: log_queue.put(f"Early Stopping: {patience} epoch 동안 개선 없음.")
+                        if log_queue: log_queue.put(f"Early Stopping: {min_improvement_factor*100}% 이상의 개선이 {patience} epoch 동안 없음.")
                         if stop_event: stop_event.set()
                         break
 
-            # 최종 출력 시 추천 임계값을 함께 알려줌
+            # 최종 파라미터 업데이트
             final_msg = f"학습 종료. 최적 Val Loss: {best_val_loss:.6f} | 추천 Base Threshold: {recommended_base_threshold:.6f}"
             if log_queue: log_queue.put(final_msg)
             
-            # g_vars에 자동으로 업데이트하거나 저장하여 _infer에서 쓰게 할 수도 있습니다.
             g_vars.threshold = recommended_base_threshold 
             update_parameters({"THRES" : recommended_base_threshold})
+            
+            with g_vars.lock:
+                g_vars.GLOBAL_CHANGE = True
 
         finally:
             self.train_stop_event(log_queue=log_queue)
-            if 'model' in locals():
-                model_cpu = model.to('cpu')
-                del model_cpu
-                del model
+            if 'model' in locals() and model is not None:
+                model.to('cpu')
             import gc
             gc.collect()
+            torch.cuda.empty_cache()
         
     def main(self):
         self.log_queue.put(f"device : {self.device} | SEQ_LEN : {g_vars.SEQ_LEN} | STRIDE : {g_vars.STRIDE}")
@@ -281,9 +290,9 @@ class TrainMode():
         model = TransformerMacroAutoencoder(
             input_size=len(g_vars.FEATURES),
             d_model=g_vars.d_model,
-            nhead=4,
+            nhead=g_vars.n_head,
             num_layers=g_vars.num_layers,
-            dim_feedforward=128,
+            dim_feedforward=g_vars.dim_feedforward,
             dropout=g_vars.dropout
         ).to(self.device)
 
@@ -304,11 +313,11 @@ class TrainMode():
             val_dataset=val_dataset, 
             batch_size=g_vars.batch_size, 
             lr=g_vars.lr,
-            epochs=300,
+            epochs=g_vars.epoch,
             device=self.device, 
             model=model, 
             stop_event=self.stop_event, 
-            patience=20, 
+            patience=g_vars.patience, 
             log_queue=self.log_queue, 
             save_path=g_vars.save_path
         )
@@ -324,3 +333,6 @@ class TrainMode():
         
         if log_queue: 
             log_queue.put("🧹 GPU Cache Cleared")
+
+        with g_vars.lock:
+            g_vars.GLOBAL_CHANGE = True

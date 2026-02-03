@@ -50,7 +50,7 @@ except ImportError:
                 # 1. 전역 변수 업데이트 (타입 캐스팅 포함)
                 g_vars.SEQ_LEN = int(data_dict.get('SEQ_LEN', 100))
                 g_vars.STRIDE = int(data_dict.get('STRIDE', 10))
-                g_vars.d_model = int(data_dict.get('HIDDEN', 128))
+                g_vars.d_model = int(data_dict.get('D_MODEL', 128))
                 g_vars.num_layers = int(data_dict.get('LAYERS', 2))
                 g_vars.lr = float(data_dict.get('LR', 0.0))
                 g_vars.threshold = float(data_dict.get('THRES', 0.5))

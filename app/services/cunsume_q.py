@@ -41,9 +41,9 @@ def cunsume_q(record:bool, isUser:bool, log_queue:Queue = None):
             os.makedirs(save_dir, exist_ok=True)            
             file_name = "user_move.json"
         else:
-            save_dir = os.path.join(g_vars.JsonPath, "macro")
+            save_dir = os.path.join(g_vars.JsonPath, "move_data")
             os.makedirs(save_dir, exist_ok=True)              
-            file_name = "macro_move.json"
+            file_name = "move_data.json"
 
         file_path = os.path.join(save_dir, file_name)
 

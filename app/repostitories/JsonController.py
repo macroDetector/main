@@ -5,7 +5,7 @@ def read(user: bool, log_queue:Queue):
     import os, json
 
     json_dir = g_vars.JsonPath
-    subfolder = "user" if user else "macro"
+    subfolder = "user" if user else "move_data"
     path = os.path.join(json_dir, subfolder)
 
     try:

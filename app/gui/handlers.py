@@ -8,6 +8,7 @@ from multiprocessing import Process
 import app.core.globals as g_vars
 from app.services.train import TrainMode
 import app.services.inferece as inferece
+import app.services.inferece_json as inferece_json
 from app.services.plot import plot_main
 import app.repostitories.DBController as DBController
 import app.repostitories.JsonController as JsonController
@@ -54,6 +55,7 @@ class UIHandler:
             thread.start()
             g_vars.LOG_QUEUE.put("System: Recording thread started.")
 
+
     def start_train(self):
         if self._ask_confirm("확인", "학습을 시작하시겠습니까?"):
             self.stop_move_event.clear()
@@ -74,6 +76,16 @@ class UIHandler:
             self.stop_move_event.clear()
             threading.Thread(
                 target=inferece.main,
+                kwargs={"stop_event": self.stop_move_event, "log_queue": g_vars.LOG_QUEUE},
+                daemon=True
+            ).start()
+            g_vars.LOG_QUEUE.put("System: Inference thread started.")
+
+    def start_inference_json(self):
+        if self._ask_confirm("확인", "탐지를 시작하시겠습니까?"):
+            self.stop_move_event.clear()
+            threading.Thread(
+                target=inferece_json.main,
                 kwargs={"stop_event": self.stop_move_event, "log_queue": g_vars.LOG_QUEUE},
                 daemon=True
             ).start()

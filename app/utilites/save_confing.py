@@ -1,4 +1,4 @@
-def update_parameters(data_dict):
+def update_parameters(data_dict:dict):
         try:
             import os, sys, json
             import app.core.globals as g_vars 
@@ -16,16 +16,25 @@ def update_parameters(data_dict):
                 with open(config_path, "r", encoding="utf-8") as f:
                     current_config = json.load(f)
 
+
+
             # 2. UI 파라미터 업데이트 (기존 로직)
             mapping = {
                 'SEQ_LEN': ('SEQ_LEN', int),
                 'STRIDE': ('STRIDE', int),
-                'HIDDEN': ('d_model', int),
+                'D_MODEL': ('d_model', int),
                 'LAYERS': ('num_layers', int),
                 'LR': ('lr', float),
                 'THRES': ('threshold', float),
                 'TOLE': ('tolerance', float),
-                'RECORDER': ('Recorder', str)
+                'RECORDER': ('Recorder', str),
+                'N_HEAD' : ('n_head', int),
+                'BATCH' : ('batch_size', int),
+                "EPOCH" : ('epoch', int),
+                "PATIENCE" : ('patience', int),
+                "WEIGHT" : ('weight_decay', float),
+                "FEED" : ('dim_feedforward', int),
+                "DROP" : ('drop_out', float)
             }
 
             for ui_key, (json_key, dtype) in mapping.items():
@@ -49,6 +58,10 @@ def update_parameters(data_dict):
                 json.dump(current_config, f, indent=4, ensure_ascii=False)
 
             g_vars.LOG_QUEUE.put("✅ [SYSTEM] Configuration & Bounds saved")
+
+            with g_vars.lock:
+                g_vars.GLOBAL_CHANGE = False
+
             return True
 
         except Exception as e:
