@@ -1,14 +1,11 @@
-from pynput.mouse import Controller
-
+from pynput import mouse
 import time
-import app.core.globals as g_vars
 from datetime import datetime
-from multiprocessing import Queue
-
+from multiprocessing import Queue, Event
+import app.core.globals as g_vars
 from app.services.macro_dectector import MacroDetector
-from multiprocessing import Event
 
-def main(stop_event=None, log_queue:Queue=None, chart_Show=True):
+def main(stop_event=None, log_queue: Queue = None, chart_Show=True):
     if stop_event is None:
         stop_event = Event()
 
@@ -22,98 +19,67 @@ def main(stop_event=None, log_queue:Queue=None, chart_Show=True):
 
     detector.start_plot_process()
     
-    if log_queue:
-        log_queue.put("🟢 Macro Detector Running")
-    else:
-        print("🟢 Macro Detector Running")
+    msg = "🟢 Macro Detector (Listener Mode) Running"
+    if log_queue: log_queue.put(msg)
+    else: print(msg)
 
-    mouse_controller = Controller()
+    # 상태 관리를 위한 딕셔너리
+    state = {
+        'last_ts': time.perf_counter(),
+        'error_start_time': None
+    }
 
-    pre_x = None
-    pre_y = None
-
-    # 간격
-    tolerance = g_vars.tolerance
-
-    # 초기값 설정
-    start_time = time.perf_counter()
-    end_time = time.perf_counter()
-
-    error_start_time = None
-    while not stop_event.is_set():
+    def on_move(x, y):
         try:
-            # --- 보호 모드 탈출 성공 시 시간 계산 ---
-            if error_start_time is not None:
-                total_error_duration = time.perf_counter() - error_start_time
-                print(f"✅ 보호 모드 해제 (지속 시간: {total_error_duration:.2f}초)")
+            now_ts = time.perf_counter()
+            delta = now_ts - state['last_ts']
 
-            error_start_time = None # 시간 초기화            
-            if end_time - start_time < tolerance:
-                
-                end_time = time.perf_counter()
-                continue
+            # 설정한 tolerance(0.02s)보다 실제 이동 간격이 클 때만 탐지기에 푸시
+            if delta >= g_vars.tolerance:
+                data = {
+                    'timestamp': datetime.now().isoformat(),
+                    'x': int(x),
+                    'y': int(y),
+                    'deltatime': delta # 실제 물리적 시간 (0.0209... 등)
+                }
 
-            x, y = mouse_controller.position
+                state['last_ts'] = now_ts
+                state['error_start_time'] = None # 정상 작동 시 에러 시간 초기화
 
-            if pre_x is None or pre_y is None:
-                pre_x, pre_y = x, y
-                start_time = end_time = time.perf_counter()
-                continue
+                result = detector.push(data)
 
-            if x == pre_x and y == pre_y:
-                start_time = end_time = time.perf_counter()
-                continue
-            
-            # 중요
-            delta = max(0, end_time - start_time - tolerance)
+                if result:
+                    m_prob = result.get('prob_value', 0.0) 
+                    m_str = result.get('macro_probability', "0%")
+                    raw_e = result.get('raw_error', 0.0)
 
-            data = {
-                'timestamp': datetime.now().isoformat(),
-                'x': int(x),
-                'y': int(y),
-                'deltatime': delta
-            }
+                    if result["is_human"]:
+                        log_msg = f"🙂 HUMAN | {m_prob} | {m_str} (err: {raw_e:.4f})"
+                    else:
+                        log_msg = f"🚨 MACRO DETECTED | {m_str} (err: {raw_e:.4f}) 🚨"
 
-            pre_x, pre_y = x, y
+                    if log_queue: log_queue.put(log_msg)
+                    else: print(log_msg)
 
-            result = detector.push(data)
-
-            if result:
-                # 확률 수치(float)를 가져옵니다.
-                m_prob = result.get('prob_value', 0.0) 
-                m_str = result.get('macro_probability', "0%")
-                raw_e = result.get('raw_error', 0.0)
-
-                if result["is_human"]:
-                    log_msg = f"🙂 HUMAN | {m_str} (err: {raw_e:.4f})"
-                else:
-                    # 매크로 판정 시 사이렌 이모지와 함께 확률 강조
-                    log_msg = f"🚨 MACRO DETECTED | {m_str} (err: {raw_e:.4f}) 🚨"
-
-                # 출력 대상 선택 (Queue 혹은 Print)
-                if log_queue:
-                    log_queue.put(log_msg)
-                else:
-                    print(log_msg)
         except Exception as e:
-                # 에러가 처음 발생한 시점 기록
-                if error_start_time is None:
-                    error_start_time = time.perf_counter()
-                    print(f"🚨 보호 모드 진입 (원인: {e})")
+            if state['error_start_time'] is None:
+                state['error_start_time'] = time.perf_counter()
+                print(f"\n🚨 보호 모드 진입 (원인: {e})")
+            
+            # 리스너 내부에서는 스레드 안전을 위해 간단한 에러 출력만 권장
+            print(f"🟢 감지 중단됨... {e}", end="\r")
 
-                current_error_duration = time.perf_counter() - error_start_time
-                print(f"🟢 보호 모드 작동 중... ({current_error_duration:.1f}초 경과)", end="\r")
+    # 리스너 시작
+    listener = mouse.Listener(on_move=on_move)
+    listener.start()
 
-                time.sleep(1)
-                
-                start_time = time.perf_counter()
-                end_time = time.perf_counter()
-                continue
-
-    if log_queue:
-        log_queue.put("🛑 Macro Detector Stopped")
-    else:
-        print("🛑 Macro Detector Stopped")
-
-    stop_event.set()    
-
+    try:
+        # stop_event가 발생할 때까지 메인 스레드는 대기
+        while not stop_event.is_set():
+            time.sleep(0.5)
+    finally:
+        listener.stop()
+        msg = "🛑 Macro Detector Stopped"
+        if log_queue: log_queue.put(msg)
+        else: print(msg)
+        stop_event.set()

@@ -20,96 +20,61 @@ Detection Logic
 
 ![Architecture Diagram](./public/Architecture.png)
 
-# Update Ver 1.0.1
-Feature
-- Enhanced Tracking Precision: Added .env persistence for tolerance (lower values allow for finer and more detailed mouse data sampling).
-- Improved System Stability: Implemented tolerance to ensure stable inference and training performance even in low-frequency (Low Hz) environments, alongside Protection Mode for restricted windows.
-- Improved Stability (Protection Mode): Added a fail-safe protocol to prevent crashes and ensure stable recording in restricted windows like Task Manager.
-- Epoch 50 => 300
-- Cliping 
-- config.json으로 초기 셋팅값 정리
+## 🚀 Update Ver 0.0.2
 
-UI & UX
-- The UI has been refined for a more sophisticated look.
-- Tray Mode Integration: Added a "Minimize to Tray" feature to keep the application running in the background, allowing for a clutter-free workspace.
+### 🛠 Features
+* **Enhanced Tracking Precision:** Added **Tolerance** settings. Lowering this value allows for finer, high-resolution mouse data sampling.
+* **Optimized Inference Stability:** Implemented **Temporal Filtering** via Tolerance to ensure consistent inference and training performance, even in low-frequency (Low Hz) environments.
+* **Improved System Resilience (Protection Mode):** Integrated a fail-safe protocol to prevent application crashes and maintain recording stability when navigating restricted windows (e.g., Task Manager).
+* **Model Training Upgrade:** Increased training **Epochs** from 50 to 300 for improved pattern recognition accuracy.
+* **Centralized Configuration:** Migrated initial setup parameters to `config.json` for easier environment and hyperparameter management.
+* **Refined Detection Output:** Updated the Macro Detection UI and log format for enhanced readability and real-time monitoring.
+
+### 🔴 Critical Fixes
+
+* **Event-Driven Movement Tracking & Physical Delta Logic**
+    * **Issue:** The previous polling-loop system captured mouse positions at fixed artificial intervals. This "digitized" the data, forcing points to be recorded at exactly 0.02s regardless of the actual physical hardware signal, which caused the loss of natural human acceleration and micro-timing dynamics.
+    * **Fix:** Migrated from a Polling-loop to an **OS-level Event Listener** (`pynput.mouse.Listener`). The system now captures the "Actual Physics" of movement by calculating the time elapsed between real hardware interrupts.
+    * **Logic:** 1. **Movement-Triggered:** Data capture is initiated by physical mouse movement, not a clock timer.
+        2. **Threshold Filtering:** An entry is recorded only if the `delta_time` since the last recorded event exceeds the defined `tolerance` (0.02s).
+        3. **Raw Delta Preservation:** Instead of forcing a normalized 0.02s, the system records the **exact high-precision time** (e.g., 0.0209s, 0.0215s) when the coordinate change occurred.
+    * **Result:** Captures high-fidelity, human-centric movement data. The recorded `deltatime` now reflects real-world acceleration and velocity curves, significantly improving the Macro/Bot detection model's ability to distinguish between organic human input and synthetic patterns.
+
+* **Data Integrity & Feature Engineering**
+    * By consolidating micro-steps into ~20ms packets, the model can more accurately distinguish between the **consistent mechanical velocity** of a macro and the **variable reaction-time jitters** of a human user.
+    * This normalization is critical for accurate acceleration ($a = \Delta v / \Delta t$) and jerk ($j = \Delta a / \Delta t$) feature engineering in AI training.
+
+### ✨ UI & UX Improvements
+* **Refined Interface:** Polished the UI components for a more modern and sophisticated look.
+* **Tray Mode Integration:** Added a **"Minimize to Tray"** feature to keep the application running in the background, ensuring a clutter-free workspace while maintaining active monitoring.
 
 ---
 
-# Update Ver 0.0.0
-- CLI Mode Expansion: Inference Mode now officially supports both Windows CMD and Linux Terminal environments.
-- Portable Release: Executables are now bundled and provided as ZIP archives via PyInstaller for easy deployment.
+## 🚀 Update Ver 0.0.1
+
+### 🔧 Features
+* **CLI Mode Expansion:** Inference Mode now officially supports both **Windows CMD** and **Linux Terminal** environments for broader compatibility.
+* **Portable Release:** Executables are now bundled and distributed as **ZIP archives** via PyInstaller, allowing for easy deployment without complex installation.
+
+### ⌨️ Shortcuts & Commands
+* **Inference Mode (CLI):** - `Start` => `Inference Mode` => `Yes`
+* **Inference Mode (UI):** - `UI` => `Inference Mode` => `No`
+* **Emergency Quit:** `Ctrl + Shift + Q`
 
 ![Cmdupdate](./public/Cmdupdate.png)
 
-Start => inference Mode => yes
-UI => inference Mode => No
-
-Quit => ctrl + shift + q
-
 ---
-# 지원 프로그램
-- postgres
-- json
 
-# 필수 파일
-.env
-```
-# 기록기
-# postgres => postgres, json => json
-Recorder=json
+## 📂 Data Management
+* **Database Support:** Efficient data handling using **PostgreSQL** and **JSON** formats.
 
-# posgres를 사용 시 기입
-DB_HOST=localhost
-DB_USER=postgres
-DB_PASSWORD=your_password
-DB_NAME=your_db_name
-DB_PORT=0000
+## 🛠 Installation
+* To install the required dependencies, run the following command:
+  ```bash
+  pip install -r requirements.txt
 
-# 필수 입력
-SEQ_LEN=100
-STRIDE=50
-JsonPath=./
-threshold=0.7
-d_model=256
-num_layers=3
-dropout=0.3
-batch_size=64
-lr=0.0005
-```
-
-# 설치 목록
-```
-pynput
-torch
-psycopg2-binary
-SQLAlchemy
-pydantic_settings
-pyautogui
-matplotlib
-numpy
-pyqtgraph 
-PySide6
-PyQt6
-keyboard
-```
-
-명령어
-```
-pip install -r requirements.txt
-```
-
-# 주의 사항
-학습 시 설정한
-SEQ_LEN, d_model, num_layers, dropout
-
-값이 추론 시 동일 해야 정상 작동 함.
-
-# 사용 설명서 (Manual)
+## 사용 설명서 (Manual)
 Manual.pptx
 
-# 예시용 모델
-model 경로 => app.models.weights
-=> SED_LEN=100, d_model=256, num_layers=3, dropout=0.3
-
-# 영상
+## 영상
 [![실행 영상](https://img.youtube.com/vi/iwi31PxQc3I/0.jpg)](https://youtu.be/iwi31PxQc3I)
