@@ -6,42 +6,48 @@ import sys
 
 class RealTimeMonitor:
     def __init__(self, features, threshold, window_size=100):
-        self.app = QApplication.instance()
-        if not self.app:
-            self.app = QApplication(sys.argv)
+        self.app = QApplication.instance() or QApplication(sys.argv)
             
         self.win = pg.GraphicsLayoutWidget(show=True, title="Real-time Feature Monitor")
-        self.win.resize(1000, 800)
+        self.win.resize(1200, 800) # 가로를 좀 더 넓게 조절
         
         self.features = features
         self.window_size = window_size
         self.plots = []
         self.curves = []
         
-        # 데이터 구조 변경: [특징들(len(features)) + 에러(1) + 임계치(1), 윈도우 크기]
-        # 즉, 마지막 두 행이 각각 에러값과 동적 임계치값입니다.
         self.data = np.zeros((len(features) + 2, window_size))
         
-        # Feature별 그래프 생성
+        # --- Feature별 그래프 생성 (3열 배치) ---
+        num_cols = 3
         for i, f in enumerate(features):
-            p = self.win.addPlot(row=i, col=0, title=f)
+            row_idx = i // num_cols
+            col_idx = i % num_cols
+            
+            p = self.win.addPlot(row=row_idx, col=col_idx, title=f)
             p.showGrid(x=True, y=True)
+            # 텍스트 크기 조절 (칸이 좁아지므로)
+            p.setTitle(f, size='10pt') 
+            
             curr_curve = p.plot(pen='c') 
             self.plots.append(p)
             self.curves.append(curr_curve)
             
-        # Reconstruction Error 그래프 (마지막 줄)
-        self.error_plot = self.win.addPlot(row=len(features), col=0, title="Reconstruction Error (Dynamic Threshold)")
+        # --- Reconstruction Error 그래프 (가장 아래에 꽉 차게) ---
+        # 마지막 피처가 있던 줄 다음 줄(last_row) 계산
+        last_row = (len(features) - 1) // num_cols + 1
+        
+        # col=0부터 시작해서 3칸을 다 차지하도록(colspan=3) 설정
+        self.error_plot = self.win.addPlot(row=last_row, col=0, colspan=num_cols, 
+                                           title="Reconstruction Error (Dynamic Threshold)")
         self.error_plot.showGrid(x=True, y=True)
+        self.error_plot.setFixedHeight(250) # 에러 차트는 중요하니 높이 고정
         
-        # 에러 곡선 (빨간색)
         self.error_curve = self.error_plot.plot(pen=pg.mkPen('r', width=2))
-        
-        # 동적 임계치 곡선 (초록색 점선)
         self.threshold_curve = self.error_plot.plot(
             pen=pg.mkPen('g', width=2, style=Qt.PenStyle.DashLine)
         )
-
+        
     def update_view(self, x_tensor_np, error, current_threshold):
         """
         x_tensor_np: 모델 입력 데이터

@@ -190,6 +190,8 @@ class TrainMode():
 
         user_df_chunk = make_df_from_points(user_all, is_dict=is_dict)
 
+        user_df_chunk= user_df_chunk.sort_values('timestamp').reset_index(drop=True)
+
         # ===== Feature 계산 =====
         setting_user_df_chunk: pd.DataFrame = indicators_generation(user_df_chunk)
         
@@ -198,16 +200,28 @@ class TrainMode():
 
         clip_bounds_dict = {}
         for col in g_vars.FEATURES:
-            # numpy float64를 일반 python float으로 변환하여 JSON 에러 방지
-            lower = float(setting_user_df_chunk[col].quantile(0.01))
-            upper = float(setting_user_df_chunk[col].quantile(0.99))
+            # 1. 일단 콴타일로 범위를 계산합니다.
+            lower = float(setting_user_df_chunk[col].quantile(0.05))
+            upper = float(setting_user_df_chunk[col].quantile(0.95))
+            
+            # 2. [핵심 수정] 속도와 관련된 지표들은 '움직임 없음(0)'을 허용해야 합니다.
+            # 학습 데이터에 움직임만 있더라도, 추론 시 정지 상태를 위해 min을 0으로 강제합니다.
+            if col in ['speed', 'speed_var', 'jerk_std', 'straightness']:
+                # straightness는 보통 1이 최소지만 안전하게 0이나 데이터 최소값 중 작은 쪽 선택
+                lower = 0.0 
+            
+            # 3. 각 지표별 특성에 따른 하한선 보정 (필요시)
+            # turn, acc 등은 음수가 가능하므로 콴타일 그대로 사용
+            
             clip_bounds_dict[col] = {"min": lower, "max": upper}
-
             setting_user_df_chunk[col] = setting_user_df_chunk[col].clip(lower, upper)
+
+            
         
         # 전역 변수 업데이트
         g_vars.CLIP_BOUNDS = clip_bounds_dict
-
+        update_parameters({"CLIP_BOUNDS" : clip_bounds_dict})
+        
         print(f"{json.dumps(clip_bounds_dict, indent=2)} Save")
 
         print(f"setting_user_df_chunk : {setting_user_df_chunk}")
@@ -273,7 +287,7 @@ class TrainMode():
             dropout=g_vars.dropout
         ).to(self.device)
 
-        timeinterval = 10
+        timeinterval = 7
 
         while timeinterval != 0:
             if self.stop_event.is_set():

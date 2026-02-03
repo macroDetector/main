@@ -46,8 +46,9 @@ def record_mouse_path(isUser, stop_event=None, record=True, log_queue:Queue=None
             if x == pre_x and y == pre_y:
                 start_time = end_time = time.perf_counter()
                 continue
-
-            delta = end_time - start_time
+            
+            # 중요!
+            delta = max(0, end_time - start_time - tolerance)
 
             print(f"x : {x} || y : {y} || delta : {delta}")
 

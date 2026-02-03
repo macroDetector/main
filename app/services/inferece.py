@@ -63,8 +63,9 @@ def main(stop_event=None, log_queue:Queue=None, chart_Show=True):
             if x == pre_x and y == pre_y:
                 start_time = end_time = time.perf_counter()
                 continue
-
-            delta = end_time - start_time
+            
+            # 중요
+            delta = max(0, end_time - start_time - tolerance)
 
             data = {
                 'timestamp': datetime.now().isoformat(),
@@ -78,16 +79,22 @@ def main(stop_event=None, log_queue:Queue=None, chart_Show=True):
             result = detector.push(data)
 
             if result:
+                # 확률 수치(float)를 가져옵니다.
+                m_prob = result.get('prob_value', 0.0) 
+                m_str = result.get('macro_probability', "0%")
+                raw_e = result.get('raw_error', 0.0)
+
                 if result["is_human"]:
-                    if log_queue:
-                        log_queue.put(f"🙂 HUMAN | prob={result['prob']:.3f}")
-                    else:
-                        print(f"🙂 HUMAN | prob={result['prob']:.3f}")
+                    log_msg = f"🙂 HUMAN | {m_str} (err: {raw_e:.4f})"
                 else:
-                    if log_queue:
-                        log_queue.put(f"🚨 MACRO | prob={result['prob']:.3f}") 
-                    else:
-                        print(f"🚨 MACRO | prob={result['prob']:.3f}") 
+                    # 매크로 판정 시 사이렌 이모지와 함께 확률 강조
+                    log_msg = f"🚨 MACRO DETECTED | {m_str} (err: {raw_e:.4f}) 🚨"
+
+                # 출력 대상 선택 (Queue 혹은 Print)
+                if log_queue:
+                    log_queue.put(log_msg)
+                else:
+                    print(log_msg)
         except Exception as e:
                 # 에러가 처음 발생한 시점 기록
                 if error_start_time is None:
@@ -109,3 +116,4 @@ def main(stop_event=None, log_queue:Queue=None, chart_Show=True):
         print("🛑 Macro Detector Stopped")
 
     stop_event.set()    
+
