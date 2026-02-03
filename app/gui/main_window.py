@@ -189,7 +189,7 @@ class VantageUI(QMainWindow):
         # 섹션들 추가
         self.scroll_layout.addWidget(self.create_section("🎥 MOUSE CAPTURE", [
             ("Start New Mouse Recording feat User", lambda: self.handler.start_record(isUser=True, record=True)),
-            ("Start New Mouse Recording feat Macro_Data", lambda: self.handler.start_record(isUser=False, record=True))            
+            ("Start New Mouse Recording feat Move_Data", lambda: self.handler.start_record(isUser=False, record=True))            
         ]))
         
         self.scroll_layout.addWidget(self.create_combined_settings_card())

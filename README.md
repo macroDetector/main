@@ -20,39 +20,54 @@ Detection Logic
 
 ![Architecture Diagram](./public/Architecture.png)
 
-## 🚀 Update Ver 0.0.2
+# 🚀 Macro Detector Update Ver 0.0.2
 
-### 🛠 Features
-* **Enhanced Tracking Precision:** Added **Tolerance** settings. Lowering this value allows for finer, high-resolution mouse data sampling.
-* **Optimized Inference Stability:** Implemented **Temporal Filtering** via Tolerance to ensure consistent inference and training performance, even in low-frequency (Low Hz) environments.
-* **Improved System Resilience (Protection Mode):** Integrated a fail-safe protocol to prevent application crashes and maintain recording stability when navigating restricted windows (e.g., Task Manager).
-* **Model Training Upgrade:** Increased training **Epochs** from 50 to 300 for improved pattern recognition accuracy.
-* **Centralized Configuration:** Migrated initial setup parameters to `config.json` for easier environment and hyperparameter management.
-* **Refined Detection Output:** Updated the Macro Detection UI and log format for enhanced readability and real-time monitoring.
+A high-precision, AI-powered mouse movement analyzer designed to distinguish between organic human input and synthetic macro patterns through OS-level event tracking and Temporal Feature Engineering.
 
-Start New Mouse Recording feat Macro_Data 기능 추가 macro data
-Json Data Inference 기록된 json 파일로 검사
-여러 가지 조정할수 있는 값들 패널에 부착
-plot ui 변경
+## 🛠 Key Features & Enhancements
+
+### 1. High-Fidelity Physics-Based Tracking
+* **Enhanced Precision (Tolerance):** Introduced configurable tolerance settings for high-resolution sampling.
+* **Temporal Filtering:** Ensures inference stability across various hardware environments (Low/High Hz) by stabilizing the data entry intervals.
+* **Actual Physics Logic:** Migrated from a fixed-interval polling system to an **OS-level Event Listener** (`pynput.mouse.Listener`).
+    * **Old:** Captured data at forced 0.02s intervals (Digitized/Artificial).
+    * **New:** Captures the "Physical Truth" by recording high-precision $\Delta t$ (e.g., 0.0209s) between hardware interrupts.
+    * **Impact:** Preserves human-centric micro-timing dynamics, acceleration curves, and organic jitter.
+
+### 2. Model & Inference Upgrade
+* **Training Optimization:** Increased Epochs from **50 to 300** and transitioned the loss function to **MSE (Mean Squared Error)** for superior convergence on regression tasks.
+* **Post-Analysis Mode:** Added **JSON Data Inference**. You can now record mouse data and run the detector on saved `.json` files for post-event forensics.
+* **Protection Mode:** Integrated a fail-safe protocol to maintain system stability and prevent crashes when interacting with restricted windows (e.g., Task Manager).
+
+### 3. Centralized Architecture
+* **Config Management:** All hyperparameters and environment variables are now managed via `config.json`.
+* **Feature Engineering:** Improved calculation of **Acceleration** ($a = \Delta v / \Delta t$) and **Jerk** ($j = \Delta a / \Delta t$) by utilizing the new high-precision delta time values.
+
+## ✨ UI & UX Improvements
+* **Refined Interface:** Modernized UI components with a professional dark-themed aesthetic.
+* **Interactive Tooltips:** Added a 1-second delay hint system for all dashboard parameters.
+* **Tray Integration:** "Minimize to Tray" support for seamless background monitoring.
+* **Enhanced Logging:** Real-time macro detection output with siren emojis and probability percentages for better visibility.
 
 
-### 🔴 Critical Fixes
+## 🔴 Critical Fix: Event-Driven Architecture
+The transition from a Polling-loop to an **Event-driven** model solves the "stuttering" issue and data loss. 
 
-* **Event-Driven Movement Tracking & Physical Delta Logic**
-    * **Issue:** The previous polling-loop system captured mouse positions at fixed artificial intervals. This "digitized" the data, forcing points to be recorded at exactly 0.02s regardless of the actual physical hardware signal, which caused the loss of natural human acceleration and micro-timing dynamics.
-    * **Fix:** Migrated from a Polling-loop to an **OS-level Event Listener** (`pynput.mouse.Listener`). The system now captures the "Actual Physics" of movement by calculating the time elapsed between real hardware interrupts.
-    * **Logic:** 1. **Movement-Triggered:** Data capture is initiated by physical mouse movement, not a clock timer.
-        2. **Threshold Filtering:** An entry is recorded only if the `delta_time` since the last recorded event exceeds the defined `tolerance` (0.02s).
-        3. **Raw Delta Preservation:** Instead of forcing a normalized 0.02s, the system records the **exact high-precision time** (e.g., 0.0209s, 0.0215s) when the coordinate change occurred.
-    * **Result:** Captures high-fidelity, human-centric movement data. The recorded `deltatime` now reflects real-world acceleration and velocity curves, significantly improving the Macro/Bot detection model's ability to distinguish between organic human input and synthetic patterns.
+| Feature | Polling System (Old) | Event Listener (New) |
+| :--- | :--- | :--- |
+| **Trigger** | Clock Timer (Fixed) | Physical Hardware Interrupt |
+| **Time Delta** | Normalized (Forced 0.02s) | Raw High-Precision (Actual Physics) |
+| **Data Quality** | Lossy / Synthetic | High-Fidelity / Organic |
+| **Human Jitter** | Smoothed out (Filtered) | Captured accurately (Essential for AI) |
 
-* **Data Integrity & Feature Engineering**
-    * By consolidating micro-steps into ~20ms packets, the model can more accurately distinguish between the **consistent mechanical velocity** of a macro and the **variable reaction-time jitters** of a human user.
-    * This normalization is critical for accurate acceleration ($a = \Delta v / \Delta t$) and jerk ($j = \Delta a / \Delta t$) feature engineering in AI training.
 
-### ✨ UI & UX Improvements
-* **Refined Interface:** Polished the UI components for a more modern and sophisticated look.
-* **Tray Mode Integration:** Added a **"Minimize to Tray"** feature to keep the application running in the background, ensuring a clutter-free workspace while maintaining active monitoring.
+## 🚀 How to Run
+1.  **Configure:** Edit `config.json` to set your desired `tolerance`, `threshold`, and `seq_len`.
+2.  **Record/Detect:**
+    * Use **Move_Data** to record new human patterns.
+    * Run the **Macro Detector** for real-time monitoring.
+    * Use **Json Data Inference** to analyze existing logs.
+3.  **Train:** Run the training module to update the model with your custom MSE-based weights.
 
 ---
 
