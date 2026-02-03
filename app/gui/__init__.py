@@ -1,6 +1,3 @@
-from app.core.settings import settings
-
-
 # [Global/Core 연동 섹션]
 try:
     import app.core.globals as g_vars
