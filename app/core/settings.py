@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     lr: float = 0.0005
     CLIP_BOUNDS: dict = {}
     n_head: int = 4
+    weight_threshold: float = 1.0
 
     epoch: int = 100
     patience: int = 10
@@ -107,6 +108,7 @@ class Settings(BaseSettings):
                 "patience": 10,
                 "weight_decay": 0.2,
                 "dim_feedforward": 512,
+                "weight_threshold":1.0,
                 "CLIP_BOUNDS": {
                     "deltatime": {"min": 0.0, "max": 0.0},
                     "dt_cv": {"min": 0.0, "max": 0.0},
@@ -123,7 +125,7 @@ class Settings(BaseSettings):
                     "efficiency_var": {"min": 0.0, "max": 0.0},
                     "speed_var": {"min": 0.0, "max": 0.0},
                     "acc_smoothness": {"min": 0.0, "max": 0.0}
-                },
+                }
             }
 
             with open(config_path, "w", encoding="utf-8") as f:

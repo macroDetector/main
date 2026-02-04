@@ -301,8 +301,10 @@ class VantageUI(QMainWindow):
         grid.addWidget(QLabel("🚀 TRAINING"), 5, 0, 1, 3)
         self.inputs['LR'] = self.add_grid_input(grid, "LR", str(g_vars.lr), 6, 0, 
             "학습률입니다. 너무 크면 발산하고 너무 작으면 학습이 느립니다.")
-        self.inputs['BATCH'] = self.add_grid_input(grid, "BATCH", str(g_vars.batch_size), 6, 1)
-        self.inputs['EPOCH'] = self.add_grid_input(grid, "EPOCH", str(g_vars.epoch), 6, 2)
+        self.inputs['BATCH'] = self.add_grid_input(grid, "BATCH", str(g_vars.batch_size), 6, 1,
+            "한번에 얼마만큼 볼지를 결정하는 값 입니다.")
+        self.inputs['EPOCH'] = self.add_grid_input(grid, "EPOCH", str(g_vars.epoch), 6, 2,
+            "전체를 몇 번 돌릴지 정하는 값 입니다.")
         self.inputs['WEIGHT'] = self.add_grid_input(grid, "WEIGHT_D", str(g_vars.weight_decay), 7, 0, 
             "L2 정규화 강도입니다. 과적합을 방지합니다.")
         self.inputs['PATIENCE'] = self.add_grid_input(grid, "PATIENCE", str(g_vars.patience), 7, 1, 
@@ -312,7 +314,9 @@ class VantageUI(QMainWindow):
         grid.addWidget(QLabel("🔍 INFERENCE"), 8, 0, 1, 3)
         self.inputs['THRES'] = self.add_grid_input(grid, "THRESHOLD", str(g_vars.threshold), 9, 0, 
             "<b>Threshold</b>: 이상치 판단 기준값입니다. 에러가 이보다 크면 이상으로 감지합니다.")
-
+        self.inputs['WEIGHT_THRES'] = self.add_grid_input(grid, "WEIGHT_THRES", str(g_vars.weight_threshold), 9, 1, 
+            "<b>Weight Threshold</b>: 이상치 판단의 가중치 입니다 낮을 수록 값에 더 민감 해집니다.")
+        
         lay.addLayout(grid)
 
         self.apply_all_btn = self.create_styled_button("SAVE & APPLY PARAMETERS", self.apply_params, h=50, obj_name="ApplyBtn")
@@ -449,7 +453,8 @@ class VantageUI(QMainWindow):
                     "PATIENCE" : str(g_vars.patience),
                     "WEIGHT" : str(g_vars.weight_decay),
                     "FEED" : str(g_vars.dim_feedforward),
-                    "DROP" : str(g_vars.dropout)
+                    "DROP" : str(g_vars.dropout),
+                    "WEIGHT_THRES" : str(g_vars.weight_threshold)
                 }
 
                 for key, current_gvar_val in sync_map.items():

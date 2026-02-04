@@ -20,6 +20,10 @@ def main(stop_event=None, log_queue:Queue=None, chart_Show=True):
 
     detector.start_plot_process()
 
+    if log_queue : log_queue.put(f"weight_threshold : {g_vars.weight_threshold}")
+    else:
+        print(f"weight_threshold : {g_vars.weight_threshold}")
+
     # 시작 전 카운트다운
     timeinterval = 7
 

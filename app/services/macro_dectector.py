@@ -130,7 +130,7 @@ class MacroDetector:
 
         # 4. [변경] 단순 Threshold 판정 로직
         # 평균 에러가 설정한 임계값을 넘으면 바로 매크로(False) 판정
-        is_human = avg_error < self.base_threshold * 1.05
+        is_human = avg_error < self.base_threshold * g_vars.weight_threshold
         
         # 시각적인 확률 표기 (단순히 에러/임계값 비율로 표시)
         macro_score = min(100.0, round((avg_error / self.base_threshold) * 50, 2))

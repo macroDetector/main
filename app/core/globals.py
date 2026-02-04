@@ -65,6 +65,8 @@ patience = settings.patience
 weight_decay = settings.weight_decay
 dim_feedforward = settings.dim_feedforward
 
+weight_threshold = settings.weight_threshold
+
 CLIP_BOUNDS = settings.CLIP_BOUNDS
 
 GLOBAL_CHANGE = False

@@ -21,27 +21,48 @@ Detection Logic
 ![Architecture Diagram](./public/Architecture.png)
 ---
 # 🚀 Macro Detector Update Ver 0.0.3
+### 1. AI Inference Enhancements (임계값 조절 시스템)
+* **Threshold Weighting System 추가**:
+    * `Weight_Threshold` 파라미터를 통해 이상치 판정 민감도를 세밀하게 조정할 수 있습니다.
+    * **조정 가이드**: 
+        * 모델은 학습(Train) 시 최적화된 기본 Threshold를 제공합니다.
+        * 하지만 **매크로 구동 환경이나 PC 성능**에 따라 기본값이 맞지 않는 상황이 발생할 수 있습니다.
+        * 만약 이상치 탐지가 너무 안 되거나(둔감), 반대로 너무 자주 발생한다면 **Inference(추론) 모드에서 데이터를 실시간으로 체크하며 이 값을 조정**해 주세요.
+    * **민감도**: 값이 **낮을수록** 기준치가 낮아져 작은 변화에도 **민감(Sensitive)**하게 반응합니다.
+    * `config.json` 및 UI 설정 창에서 즉시 변경 가능합니다.
 
-## 🛠 추가 및 변경 기능
-* **소켓 모드(Socket Mode) 도입**
-    * `Inference Mode`에서만 활성화됩니다.
-    * 서버 주소: `localhost:52341` (TCP/IP)
-* **JSON 모드 UI 편의성 개선**
-    * `PLOT USER PATH`: 클릭 시 즉시 파일 탐색기(File Dialog) 실행.
-    * `Json Data Inference`: 실행 전 추론할 파일을 직접 선택하도록 변경.
-* **데이터 저장 로직 변경**
-    * 기존: `append` (기존 파일에 추가)
-    * 변경: **날짜/시간별 신규 파일 생성** (데이터 무결성 및 관리 편의성 증대)
+### 2. New Features (신규 기능)
+* **Socket Mode (실시간 데이터 처리)**:
+    * `Inference Mode` 전용 모드로, 외부 통신을 통한 실시간 데이터 분석을 지원합니다.
+    * **접속 정보**: `localhost:52341` (TCP/IP)
+* **데이터 관리 로직 변경 (Storage Overhaul)**:
+    * 기존 `append` 방식(기존 파일에 계속 추가)을 폐기하였습니다.
+    * **날짜 및 시간별 자동 파일 생성** 방식으로 변경하여 데이터 무결성을 높이고 관리를 체계화했습니다.
 
-## 🛠 New Features & Enhancements
-* **Added Socket Mode**
-    * Exclusively enabled in `Inference Mode` for real-time data processing.
-    * Configuration: `server_socket.bind(("localhost", 52341))`
-* **Improved JSON Mode UI Workflow**
-    * `PLOT USER PATH` now triggers a native File Dialog for easier navigation.
-    * `Json Data Inference` updated to prompt for a file selection before execution.
-* **Storage Logic Overhaul**
-    * Switched from `append` to **Timestamp-based unique file generation** for mouse data.
+### 3. UI/UX Improvements (사용성 개선)
+* **직관적인 경로 설정**: `PLOT USER PATH` 클릭 시 시스템 파일 탐색기(File Dialog)가 즉시 실행됩니다.
+* **추론 워크플로우 개선**: `Json Data Inference` 실행 전, 사용자가 추론할 파일을 직접 선택하도록 변경하여 실수 방지 및 편의성을 강화했습니다.
+
+### 1. AI Inference Enhancements (Threshold Weighting System)
+* **Added Threshold Weighting System**:
+    * Introduced the `Weight_Threshold` parameter for fine-grained sensitivity control.
+    * **Adjustment Guide**: 
+        * While the model provides an optimized base threshold during training, environmental factors such as **macro performance or PC specifications** may require adjustments.
+        * If anomaly detection is too lenient (missing detections) or too aggressive (false positives), please **monitor real-time data in Inference Mode and adjust this value accordingly**.
+    * **Sensitivity**: A **lower** value reduces the cutoff point, making the system **more sensitive** to minor fluctuations.
+    * Real-time updates are available via `config.json` or the UI Settings panel.
+
+### 2. New Features
+* **Socket Mode (Real-time Processing)**:
+    * Exclusively enabled for `Inference Mode` to support real-time data analysis via external communication.
+    * **Connection Info**: `localhost:52341` (TCP/IP)
+* **Storage Logic Overhaul**:
+    * Deprecated the legacy `append` method (adding to existing files).
+    * Implemented **Timestamp-based unique file generation** to ensure data integrity and systematic history management.
+
+### 3. UI/UX Improvements
+* **Intuitive Path Selection**: Clicking `PLOT USER PATH` now immediately launches the system file dialog for seamless navigation.
+* **Refined Inference Workflow**: `Json Data Inference` now prompts for file selection prior to execution, preventing operational errors and enhancing user convenience.
 
 ---
 # 🚀 Macro Detector Update Ver 0.0.2

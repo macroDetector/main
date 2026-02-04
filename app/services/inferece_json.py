@@ -21,6 +21,10 @@ def main(stop_event=None, log_queue:Queue=None, chart_Show=True, mode:str = "2")
 
     detector.start_plot_process()
 
+    if log_queue : log_queue.put(f"weight_threshold : {g_vars.weight_threshold}")
+    else:
+        print(f"weight_threshold : {g_vars.weight_threshold}")
+        
     user_data:list[dict]
 
     # 소켓 모드

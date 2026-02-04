@@ -34,7 +34,8 @@ def update_parameters(data_dict:dict):
                 "PATIENCE" : ('patience', int),
                 "WEIGHT" : ('weight_decay', float),
                 "FEED" : ('dim_feedforward', int),
-                "DROP" : ('dropout', float)
+                "DROP" : ('dropout', float),
+                "WEIGHT_THRES" : {'weight_threshold', float}
             }
 
             for ui_key, (json_key, dtype) in mapping.items():
