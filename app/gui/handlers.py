@@ -86,7 +86,7 @@ class UIHandler:
             self.stop_move_event.clear()
             threading.Thread(
                 target=inferece_json.main,
-                kwargs={"stop_event": self.stop_move_event, "log_queue": g_vars.LOG_QUEUE},
+                kwargs={"stop_event": self.stop_move_event, "mode" : "2", "log_queue": g_vars.LOG_QUEUE},
                 daemon=True
             ).start()
             g_vars.LOG_QUEUE.put("System: Inference thread started.")
@@ -97,7 +97,23 @@ class UIHandler:
             if g_vars.Recorder == "postgres":
                 points = DBController.read(user, log_queue=g_vars.LOG_QUEUE)
             else:
-                points = JsonController.read(user, log_queue=g_vars.LOG_QUEUE)
+                from tkinter import filedialog     
+                import json
+
+                points:list[dict]
+
+                file_pahh = filedialog.askopenfilename(title="Json 파일을 선택해 주세요", filetypes=(("json 파일", "*.json"), ("모든 파일", "*.*")))
+                if not os.path.exists(file_pahh):
+                    return [] 
+
+                try:
+                    with open(file_pahh, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                
+                    points = data
+                except Exception as e:
+                    print(e)
+                    points = []
 
             Process(
                 target=plot_main, 
