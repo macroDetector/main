@@ -141,7 +141,7 @@ def main(stop_event=None, log_queue:Queue=None, chart_Show=True, mode:str = "2")
                 log_queue.put(log_msg)
             else:
                 print(log_msg)
-                if socketMode:
+                if mode == "1":
                     all_data.append(log_msg)
 
     if mode == "1" and 'client_socket' in locals():
