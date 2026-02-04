@@ -22,24 +22,26 @@ Detection Logic
 ---
 # 🚀 Macro Detector Update Ver 0.0.3
 
-### 🇰🇷 한글 업데이트 요약
 ## 🛠 추가 및 변경 기능
 * **소켓 모드(Socket Mode) 도입**
     * `Inference Mode`에서만 활성화됩니다.
-    * 서버 주소: `server_socket.bind(("localhost", 52341))`
+    * 서버 주소: `localhost:52341` (TCP/IP)
 * **JSON 모드 UI 편의성 개선**
-    * `PLOT USER PATH` 클릭 시 즉시 파일 탐색기(File Dialog)가 실행됩니다.
-    * `Json Data Inference` 실행 시 파일을 직접 선택할 수 있도록 변경되었습니다.
-
----
+    * `PLOT USER PATH`: 클릭 시 즉시 파일 탐색기(File Dialog) 실행.
+    * `Json Data Inference`: 실행 전 추론할 파일을 직접 선택하도록 변경.
+* **데이터 저장 로직 변경**
+    * 기존: `append` (기존 파일에 추가)
+    * 변경: **날짜/시간별 신규 파일 생성** (데이터 무결성 및 관리 편의성 증대)
 
 ## 🛠 New Features & Enhancements
 * **Added Socket Mode**
-    * This feature is exclusively enabled in `Inference Mode`.
-    * Server Configuration: `server_socket.bind(("localhost", 52341))`
+    * Exclusively enabled in `Inference Mode` for real-time data processing.
+    * Configuration: `server_socket.bind(("localhost", 52341))`
 * **Improved JSON Mode UI Workflow**
-    * Clicking `PLOT USER PATH` now triggers a native File Dialog for easier navigation.
-    * `Json Data Inference` has been updated to prompt for a file selection before execution.
+    * `PLOT USER PATH` now triggers a native File Dialog for easier navigation.
+    * `Json Data Inference` updated to prompt for a file selection before execution.
+* **Storage Logic Overhaul**
+    * Switched from `append` to **Timestamp-based unique file generation** for mouse data.
 
 ---
 # 🚀 Macro Detector Update Ver 0.0.2
@@ -71,14 +73,10 @@ Detection Logic
 * **Asynchronous Queue:** 데이터 수집과 추론 로직을 분리하여 CPU 부하 상황에서도 마우스 끊김(Stuttering)이 발생하지 않습니다.
 * **Protection Mode:** 시스템 권한 창(작업 관리자 등) 접근 시에도 충돌 없이 기록을 유지하는 Fail-safe 프로토콜을 적용했습니다.
 
-
 ## ✨ UI/UX 개선
 * **Dark-themed UI:** 시각적 가독성을 높인 현대적 디자인.
 * **Tray Integration:** 백그라운드 구동을 위한 시스템 트레이 아이콘 지원.
 * **Real-time Feedback:** 감지 시 사이렌 아이콘과 함께 실시간 확률(%) 출력.
-
----
-# 🚀 Macro Detector Update Ver 0.0.2
 
 ## 🛠 Key Features & Enhancements
 
@@ -90,8 +88,6 @@ Migrated from fixed-interval polling to an **OS-level Event-driven** model to ca
 * **Web-Optimized Design:** Specifically engineered to account for the $16.66ms$ refresh cycles (60Hz) typical of web environments.
 * **Configurable Tolerance:** Added a UI-based setting to adjust the minimum temporal interval (Tolerance) for stable inference.
 * **Impact:** Preserves human-centric micro-timing, organic acceleration curves, and physical jitter—critical factors for AI-based differentiation.
-
-
 
 ### 2. Advanced Feature Engineering
 Extracts multi-dimensional variables by applying laws of physics to raw coordinate data.
@@ -109,14 +105,10 @@ Standardized detection logic to ensure universal performance across different ha
 * **Asynchronous Queue Architecture:** Decouples the Listener (Capture) from the Main Loop (Inference), eliminating mouse stuttering even under high CPU load.
 * **Protection Mode (Fail-Safe):** Integrated protocols to maintain stable recording and prevent crashes when interacting with restricted system windows (e.g., Task Manager).
 
----
-
 ## ✨ UI/UX Improvements
 * **Modern Dark Theme:** Refined dashboard with a focus on visual clarity and reduced eye strain.
 * **System Tray Integration:** Added "Minimize to Tray" support for seamless background monitoring.
 * **Real-time Detection Feedback:** Instant visual alerts using siren emojis and real-time probability percentages (%).
-
----
 
 ## 📊 Quick Comparison
 

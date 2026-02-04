@@ -6,7 +6,7 @@ import app.core.globals as g_vars
 
 from app.db.session import SessionLocal
 from app.models.MousePoint import MousePoint
-
+    
 def cunsume_q(record:bool, isUser:bool, log_queue:Queue = None):
     all_data = []
 
@@ -36,40 +36,32 @@ def cunsume_q(record:bool, isUser:bool, log_queue:Queue = None):
         finally:
             db.close()
     elif record and g_vars.Recorder == "json":
-        if isUser:
-            save_dir = os.path.join(g_vars.JsonPath, "user")
-            os.makedirs(save_dir, exist_ok=True)            
-            file_name = "user_move.json"
-        else:
-            save_dir = os.path.join(g_vars.JsonPath, "move_data")
-            os.makedirs(save_dir, exist_ok=True)              
-            file_name = "move_data.json"
+        import datetime
+        
+        # 1. 폴더 및 기본 파일명 설정
+        subfolder = "user" if isUser else "move_data"
+        base_name = "user_move" if isUser else "move_data"
+        save_dir = os.path.join(g_vars.JsonPath, subfolder)
+        
+        os.makedirs(save_dir, exist_ok=True)
+        
+        # 기본 파일 경로
+        file_path = os.path.join(save_dir, f"{base_name}.json")
 
-        file_path = os.path.join(save_dir, file_name)
+        # 2. 파일이 이미 존재하면 타임스탬프를 붙여서 경로 변경 (새로 만들기)
+        if os.path.exists(file_path):
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            file_path = os.path.join(save_dir, f"{base_name}_{timestamp}.json")
 
         try:
-            # 기존 JSON 읽기
-            if os.path.exists(file_path):
-                with open(file_path, "r", encoding="utf-8") as f:
-                    try:
-                        existing_data = json.load(f)
-                        if not isinstance(existing_data, list):
-                            existing_data = []
-                    except json.JSONDecodeError:
-                        existing_data = []
-            else:
-                existing_data = []
-
-            # 기존 데이터에 새 데이터 추가
-            existing_data.extend(all_data)
-
-            # 다시 저장
+            # 3. 합치지 않고 all_data만 바로 저장
             with open(file_path, "w", encoding="utf-8") as f:
-                json.dump(existing_data, f, ensure_ascii=False, indent=4, default=str)
+                json.dump(all_data, f, ensure_ascii=False, indent=4, default=str)
 
-            if log_queue.put:
-                log_queue.put(f"[Process] 총 {len(all_data)}개 포인트 JSON 추가 저장 완료: {file_path}")
+            if log_queue is not None:
+                status_msg = "신규 생성 완료"
+                log_queue.put(f"[Process] {status_msg} ({len(all_data)}개): {file_path}")
 
         except Exception as e:
-            if log_queue.put:
+            if log_queue is not None:
                 log_queue.put(f"[Process] JSON 저장 오류: {e}")
