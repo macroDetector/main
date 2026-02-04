@@ -20,7 +20,7 @@ Detection Logic
 
 ![Architecture Diagram](./public/Architecture.png)
 ---
-# 🚀 Macro Detector Update Ver 0.0.2 ADD
+# 🚀 Macro Detector Update Ver 0.0.3
 
 ### 🇰🇷 한글 업데이트 요약
 ## 🛠 추가 및 변경 기능
