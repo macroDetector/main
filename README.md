@@ -19,6 +19,27 @@ Detection Logic
 - Linear Decoder: Reconstructs the abstract features extracted by the encoder back into the original 5-feature dimensions.
 
 ![Architecture Diagram](./public/Architecture.png)
+---
+# 🚀 Macro Detector Update Ver 0.0.3
+
+### 🇰🇷 한글 업데이트 요약
+## 🛠 추가 및 변경 기능
+* **소켓 모드(Socket Mode) 도입**
+    * `Inference Mode`에서만 활성화됩니다.
+    * 서버 주소: `server_socket.bind(("localhost", 52341))`
+* **JSON 모드 UI 편의성 개선**
+    * `PLOT USER PATH` 클릭 시 즉시 파일 탐색기(File Dialog)가 실행됩니다.
+    * `Json Data Inference` 실행 시 파일을 직접 선택할 수 있도록 변경되었습니다.
+
+---
+
+## 🛠 New Features & Enhancements
+* **Added Socket Mode**
+    * This feature is exclusively enabled in `Inference Mode`.
+    * Server Configuration: `server_socket.bind(("localhost", 52341))`
+* **Improved JSON Mode UI Workflow**
+    * Clicking `PLOT USER PATH` now triggers a native File Dialog for easier navigation.
+    * `Json Data Inference` has been updated to prompt for a file selection before execution.
 
 ---
 # 🚀 Macro Detector Update Ver 0.0.2
@@ -111,7 +132,7 @@ Standardized detection logic to ensure universal performance across different ha
 ## 🚀 Update Ver 0.0.1
 
 ### 🔧 Features
-* **CLI Mode Expansion:** Inference Mode now officially supports both **Windows CMD** and **Linux Terminal** environments for broader compatibility.
+* **CLI Mode Expansion:** Inference Mode now officially supports both **Windows CMD** environments for broader compatibility.
 * **Portable Release:** Executables are now bundled and distributed as **ZIP archives** via PyInstaller, allowing for easy deployment without complex installation.
 
 ### ⌨️ Shortcuts & Commands

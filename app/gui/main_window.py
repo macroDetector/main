@@ -156,7 +156,7 @@ class VantageUI(QMainWindow):
 
         side_layout.addStretch()
         
-        self.ver_label = QLabel("ver 0.0.2\nDev by qqqqaqaqaqq")
+        self.ver_label = QLabel("ver 0.0.3\nDev by qqqqaqaqaqq")
         self.ver_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.ver_label.setStyleSheet("font-size: 10px !important; color: var(--text_dim); margin-bottom: 10px;")
         side_layout.addWidget(self.ver_label)
