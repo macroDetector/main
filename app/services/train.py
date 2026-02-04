@@ -130,7 +130,7 @@ class TrainMode():
                         all_val_errors.extend(sample_errors.cpu().numpy())
 
                 avg_val_loss = total_val_loss / len(val_dataset)
-                current_epoch_threshold = np.percentile(all_val_errors, 99.7)
+                current_epoch_threshold = np.percentile(all_val_errors, 95)
 
                 # ===== Logging & Early Stopping Logic =====
                 status_msg = f"Epoch {epoch+1}/{epochs} | Train: {avg_train_loss:.6f} | Val: {avg_val_loss:.6f} | Est.Thresh: {current_epoch_threshold:.6f}"

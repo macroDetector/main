@@ -59,8 +59,8 @@ def windowmode():
     user_input3 = input("🚀 Mode Select [1: 📡 Socket, 2: 📂 Load JSON, 3: 💻 Live Window]: ").strip()
 
     if user_input3 == "1":
-        import app.services.inferece_json as inference_json
-        inference_json.main(
+        import app.services.inferece_socket as inferece_socket
+        inferece_socket.main(
             stop_event=stop_move_event,
             chart_Show=chart_Show,
             mode=user_input3

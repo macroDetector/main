@@ -19,6 +19,39 @@ Detection Logic
 - Linear Decoder: Reconstructs the abstract features extracted by the encoder back into the original 5-feature dimensions.
 
 ![Architecture Diagram](./public/Architecture.png)
+
+# 🚀 Macro Detector Update (Ver 0.0.4)
+
+## 📝 Change Log (KO)
+* **모델 업그레이드**: 유저 데이터 증가에 대응하여 `d_model` 차원 확장 및 재훈련 수행
+* **통신 안정화**: 웹소켓(WebSocket) 연결 및 스트리밍 안정성 강화
+* **스키마 정의**: `app.models.MouseDetectorSocket.py` 내 Request/Response 모델 정립
+* **테스트 도구**: 프론트엔드와 백엔드 통합 웹 테스트 환경(`test_web`) 추가
+
+## 📝 Change Log (EN)
+* **Model Upgrade**: Re-trained the model with an expanded `d_model` to accommodate increasing user data.
+* **WebSocket Stability**: Enhanced stability for real-time WebSocket communication.
+* **Schema Definition**: Established `RequestBody` and `ResponseBody` in `app.models.MouseDetectorSocket.py`.
+* **Testing Suite**: Provided `test_web` environment for seamless integration testing.
+
+## 🛠 Data Models
+**File:** `app.models.MouseDetectorSocket.py`
+
+```
+python
+from pydantic import BaseModel
+from typing import List, Optional
+
+class RequestBody(BaseModel):
+    id: str
+    data: List[dict]
+
+class ResponseBody(BaseModel):
+    id: str
+    status: int
+    analysis_results: List[str]
+    message: Optional[str] = None
+```
 ---
 # 🚀 Macro Detector Update Ver 0.0.3
 ### 1. AI Inference Enhancements (임계값 조절 시스템)
