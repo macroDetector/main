@@ -4,30 +4,19 @@ import queue
 from app.core.settings import settings
 from multiprocessing import Lock
 from app.utilites.get_resource_path import get_resource_path
-
+from app.core.indicators import FEATURES_indi
 lock = Lock()
 
 MOUSE_QUEUE = queue.Queue()
 
-ALLOWABLE_ADD_DATA = 1
-
-IS_PRESSED = 0
 MAX_QUEUE_SIZE = 100000
 
 SEQ_LEN = settings.SEQ_LEN
 STRIDE = settings.STRIDE
 
-FEATURES = [
-    "dist",
-    "speed",
-    "jerk",
-    "micro_shake",
-    "curvature",
-    "angle_vel",
-    "low_speed_const_acc"
-]
+FEATURES = FEATURES_indi
 
-input_size = len(FEATURES) * 3
+input_size = len(FEATURES)
 LAST_EVENT_TS:float = 0.0
 
 MACRO_DETECTOR  = [] 
@@ -54,7 +43,8 @@ dim_feedforward = settings.dim_feedforward
 
 weight_threshold = settings.weight_threshold
 
-CLIP_BOUNDS = settings.CLIP_BOUNDS
+filter_tolerance = tolerance * 100
+offset = chunk_size + 10
 
 GLOBAL_CHANGE = False
 

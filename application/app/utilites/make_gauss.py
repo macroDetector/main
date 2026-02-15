@@ -3,8 +3,7 @@ import sys
 import pandas as pd
 from numpy.lib.stride_tricks import as_strided
 
-def make_gauss(data: pd.DataFrame, chunk_size: int, chunk_stride: int, offset: int, train_mode:bool=True) -> np.array:
-    # 1. 데이터 준비 및 메모리 뷰 생성 (복사 비용 0)
+def make_gauss(data: pd.DataFrame, chunk_size: int, chunk_stride: int, offset: int, train_mode: bool = True) -> np.array:
     data_np = data.values[offset:].astype(np.float64)
     n_samples, n_features = data_np.shape
     eps = 1e-9
@@ -12,7 +11,6 @@ def make_gauss(data: pd.DataFrame, chunk_size: int, chunk_stride: int, offset: i
     num_chunks = (n_samples - chunk_size) // chunk_stride + 1
     if num_chunks <= 0: return np.array([])
     
-    # Sliding Window 생성 (as_strided 사용으로 메모리 효율 극대화)
     itemsize = data_np.itemsize
     chunks = as_strided(
         data_np,
@@ -20,46 +18,55 @@ def make_gauss(data: pd.DataFrame, chunk_size: int, chunk_stride: int, offset: i
         strides=(chunk_stride * n_features * itemsize, n_features * itemsize, itemsize)
     )
 
-    # 2. 벡터화 가능한 연산은 루프 밖에서 한 번에 처리 (가장 빠름)
+    # 1. 기본 통계량
     m = np.mean(chunks, axis=1, keepdims=True)
     diff = chunks - m
     s = np.std(chunks, axis=1, ddof=0)
     s_safe = s + eps
 
-    sk = np.mean(diff**3, axis=1) / (s_safe**3)  # 왜도
-    roughness = np.mean(np.abs(np.diff(chunks, axis=1)), axis=1)  # 거칠기
-    theo_entropy = 0.5 * np.log2(2 * np.pi * np.e * (s_safe**2) + eps)  # 이론적 엔트로피
+    # 지표 1: 왜도 (대칭성)
+    sk = np.mean(diff**3, axis=1) / (s_safe**3)
+    
+    # 지표 2: 거칠기 (1차 미분 - 속도의 변화)
+    roughness = np.mean(np.abs(np.diff(chunks, axis=1)), axis=1)
 
-    # 3. 실측 엔트로피 계산 (진행바 유지를 위해 루프 사용)
+    # 지표 3: 가속도 거칠기 (2차 미분 - 기록기 보간법 검거용)
+    # 유저는 떨림 때문에 이게 크고, 매크로는 계산된 부드러운 곡선이라 이게 매우 작습니다.
+    jerk_rough = np.mean(np.abs(np.diff(chunks, n=2, axis=1)), axis=1)
+
+    # 2. 엔트로피 및 고유값 분석
     actual_entropy = np.zeros((num_chunks, n_features))
-    total_steps = num_chunks
-
-    for idx in range(total_steps):
+    unique_ratio = np.zeros((num_chunks, n_features)) # 지표 4: 고유값 비율
+    
+    for idx in range(num_chunks):
         window = chunks[idx]
-        
-        # 컬럼별 엔트로피 계산 (이 부분은 histogram 특성상 루프가 필요함)
         for col in range(n_features):
-            counts, _ = np.histogram(window[:, col], bins=10)
+            col_data = window[:, col]
+            
+            # 실측 엔트로피
+            counts, _ = np.histogram(col_data, bins=10)
             p = counts / (counts.sum() + eps)
             p = p[p > 0]
             actual_entropy[idx, col] = -np.sum(p * np.log2(p))
+            
+            # 고유값 비율: 기록기는 유저보다 똑같은 값이 반복될 확률이 높음
+            unique_ratio[idx, col] = len(np.unique(col_data)) / chunk_size
 
-        # --- 요청하신 진행바 로직 그대로 유지 ---
-        if train_mode:
-            if (idx + 1) % max(1, (total_steps // 50)) == 0 or (idx + 1) == total_steps:
-                progress = (idx + 1) / total_steps
-                bar = '■' * int(20 * progress) + '□' * (20 - int(20 * progress))
-                sys.stdout.write(f'\r진행중: [{bar}] {progress*100:>5.1f}% ({idx+1}/{total_steps})')
-                sys.stdout.flush()
+        if train_mode and ((idx + 1) % max(1, (num_chunks // 50)) == 0 or (idx + 1) == num_chunks):
+            progress = (idx + 1) / num_chunks
+            bar = '■' * int(20 * progress) + '□' * (20 - int(20 * progress))
+            sys.stdout.write(f'\r특징 추출 중: [{bar}] {progress*100:>5.1f}% ({idx+1}/{num_chunks})')
+            sys.stdout.flush()
 
-    # 4. 엔트로피 갭 계산 및 최종 병합
+    # 이론적 엔트로피 및 갭
+    theo_entropy = 0.5 * np.log2(2 * np.pi * np.e * (s_safe**2) + eps)
     entropy_gap = theo_entropy - actual_entropy
     
-    # 기존 input_feature 순서대로 병합: [sk, actual_entropy, entropy_gap, roughness]
-    result = np.concatenate([sk, entropy_gap, roughness], axis=1)
+    # [수정] 지표별로 5가지 특성을 묶음 (Sk, Gap, Rough, Jerk, Unique)
+    # 이제 한 지표당 5개의 파라미터가 들어갑니다.
+    combined = np.stack([sk, entropy_gap, roughness, jerk_rough, unique_ratio], axis=-1)
+    result = combined.reshape(num_chunks, -1) 
 
     if train_mode:
         sys.stdout.write('\n')
-        sys.stdout.flush()
-
     return result

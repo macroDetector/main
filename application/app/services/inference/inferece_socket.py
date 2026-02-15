@@ -115,28 +115,21 @@ def main(stop_event=None, log_queue:Queue=None, chart_Show=True):
                         'deltatime': step.get("dt") or step.get("deltatime")
                     }
                     
-                    result = detector.push(p_data)
-                    if result:
-                        m_str = result.get('macro_probability', "0%")
-                        raw_e = result.get('raw_error', 0.0)
-                        log_msg = f"{m_str} (err: {raw_e:.4f})"
-                        if not result["is_human"]: log_msg += " 🚨"
-                        
-                        if log_queue: log_queue.put(log_msg)
-                        else: print(log_msg)
-                        all_data.append(str(raw_e))
+                    detector.push(p_data)
+
+                # 추론 시작
+                send_data = detector._infer()                    
 
                 result_json = ResponseBody(
                     id = receive_data.id,
                     status = 0,
-                    analysis_results = all_data
+                    analysis_results = send_data
                 )
 
                 final_payload = result_json.model_dump_json().encode('utf-8')
 
                 client_socket.sendall(final_payload)
-                print(f"📤 분석 결과 {len(all_data)}건 전송 완료")
-
+                
                 # 버퍼 초기화
                 detector.buffer.clear()
             except socket.timeout:

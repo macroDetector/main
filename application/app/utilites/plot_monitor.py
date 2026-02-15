@@ -6,109 +6,139 @@ import numpy as np
 class RealTimeMonitor:
     def __init__(self, features, threshold):
         self.app = QApplication.instance() or QApplication([])
-        self.win = pg.GraphicsLayoutWidget(show=True, title="Extreme Values - Multi Session Monitor")
-        self.win.resize(1600, 1000)
-        self.win.setBackground('#121212')
+        # 디자인 개선을 위해 배경색 및 제목 스타일 유지
+        self.win = pg.GraphicsLayoutWidget(show=True, title="🚨 Extreme Value Analysis Monitor")
+        self.win.resize(1600, 1250) 
+        self.win.setBackground('#0A0A0C')
 
-        self.original_features = features 
-        self.num_features = len(self.original_features) 
+        self.features = features 
+        self.num_features = len(self.features)
         
-        self.stat_types = ['skewed', 'entropy_gap', 'roughness']
-        self.all_stat_names = [f"{f}_{s}" for s in self.stat_types for f in self.original_features]
-
-        self.plots = []
-        # 핵심 변경: 현재 세션의 커브들만 따로 관리
+        self.session_colors = ['#00F2FF', '#FF007F', '#70FF00', '#FFD700', '#A020F0']
+        self.plots = [] 
+        self.all_ghost_curves = [] # 박제 보관함
         self.current_active_curves = [] 
-        self.colors = ['#00BFFF', '#FFD700', '#ADFF2F', '#FF69B4', '#FFA500', '#00FA9A', '#FF4500']
         self.current_color_idx = -1
-        self.x_range = np.linspace(-10, 10, 300)
+        self.x_range = np.linspace(0, 1, 150)
+        
+        # [Peak Hold용 변수]
+        self.max_error_seen = threshold * 3
 
-        self._setup_layouts(threshold)
+        self._build_4col_layout()
+        self._setup_error_trace_layout(threshold)
         self.start_new_session()
 
-    def _setup_layouts(self, threshold):
-        cols_per_row = min(self.num_features, 8) 
-        sections = [
-            ("SECTION 1 : skewed", "#00BFFF"),
-            ("SECTION 2 : entropy_gap", "#ADFF2F"),
-            ("SECTION 3 : roughness", "#FF69B4")
-        ]
-
-        for s_idx, (title, color) in enumerate(sections):
-            self.win.addLabel(f"<b><span style='color: {color}; font-size: 11pt;'>[ {title} ]</span></b>", colspan=cols_per_row)
+    def _build_4col_layout(self):
+        """기존 4열(또는 8열) 레이아웃 유지"""
+        cols_per_row = 5 # 5열이 시인성이 좋아 수정했습니다. 원하시면 8로 바꾸셔도 됩니다.
+        for i, f_name in enumerate(self.features):
+            p = self.win.addPlot()
+            p.setFixedHeight(180)
+            self._apply_plot_style(p, f_name)
+            self.plots.append(p)
+            if (i + 1) % cols_per_row == 0:
+                self.win.nextRow()
+        if self.num_features % cols_per_row != 0:
             self.win.nextRow()
-            for f_idx in range(self.num_features):
-                total_idx = (s_idx * self.num_features) + f_idx
-                p = self.win.addPlot(title=f"<span style='color: #DDDDDD; font-size: 8pt;'>{self.all_stat_names[total_idx]}</span>")
-                p.setMinimumWidth(180) 
-                self._apply_plot_style(p)
-                self.plots.append(p)
-                if (f_idx + 1) % cols_per_row == 0: self.win.nextRow()
-            if self.num_features % cols_per_row != 0: self.win.nextRow()
 
-        self.status_plot = self.win.addPlot(title="<b>Reconstruction Error Trace</b>", colspan=cols_per_row)
-        self.status_plot.setFixedHeight(180)
-        self.status_plot.setXRange(0, 300)
-        self.status_plot.showGrid(x=True, y=True, alpha=0.2)
+    def _apply_plot_style(self, p, title):
+        p.showGrid(x=True, y=True, alpha=0.1)
+        p.setXRange(0, 1)
+        p.setYRange(0, 1.1)
+        p.setTitle(f"<span style='color: #4ECDC4; font-size: 9pt; font-family: Consolas;'>{title.upper()}</span>")
+        ax = p.getAxis('bottom'); ax.setStyle(showValues=False)
+        p.getAxis('left').setStyle(showValues=False)
+        p.setMenuEnabled(False)
+        p.addItem(pg.InfiniteLine(pos=0.5, angle=90, pen=pg.mkPen('#333333', width=1, style=Qt.PenStyle.DashLine)))
+
+    def _setup_error_trace_layout(self, threshold):
+        self.win.addLabel("<br><b><span style='color: #FF4444; font-size: 11pt;'>🚨 ANOMALY SCORE (MAE)</span></b>", colspan=5)
+        self.win.nextRow()
+        self.status_plot = self.win.addPlot(colspan=5)
+        self.status_plot.setFixedHeight(200)
+        
+        # [Y축 0 고정 및 Peak 추적 설정]
+        vbox = self.status_plot.getViewBox()
+        vbox.setLimits(yMin=0) # 0 아래로 안 내려가게 박제
+        self.status_plot.setYRange(0, self.max_error_seen, padding=0)
+        
         self.error_history = []
-        self.thresh_line = pg.InfiniteLine(pos=threshold, angle=0, pen=pg.mkPen('#FF4444', width=2, style=Qt.PenStyle.DashLine))
+        self.thresh_line = pg.InfiniteLine(pos=threshold, angle=0, pen=pg.mkPen('#FF4444', width=2))
         self.status_plot.addItem(self.thresh_line)
 
-    def _apply_plot_style(self, p):
-        p.showGrid(x=True, y=True, alpha=0.15)
-        p.setXRange(-8, 8) 
-        p.enableAutoRange(axis='y', enable=True)
-        p.getAxis('left').setStyle(tickFont=pg.Qt.QtGui.QFont('Arial', 7))
-        p.getAxis('bottom').setStyle(tickFont=pg.Qt.QtGui.QFont('Arial', 7))
-
     def start_new_session(self):
-        """새 세션 시작 시 기존 커브는 유지하고 새로운 커브 세트를 생성"""
-        self.current_color_idx = (self.current_color_idx + 1) % len(self.colors)
-        color = self.colors[self.current_color_idx]
-        
-        # 이전 세션의 커브들이 흐릿하게 보이게 하고 싶다면 여기서 투명도 조절 가능 (선택 사항)
-        # 예: for c in self.current_active_curves: c.setAlpha(0.3, False)
+        """원래 코드의 박제(Alpha 변경) 로직 복구"""
+        if self.current_active_curves:
+            for curve in self.current_active_curves:
+                c = pg.mkColor(curve.opts['pen'].color())
+                c.setAlpha(90) # 흐릿하게 박제
+                curve.setPen(pg.mkPen(c, width=1.0))
+                self.all_ghost_curves.append(curve)
 
-        # 1. 각 Plot마다 새 세션을 위한 새로운 Curve 객체를 추가함
-        self.current_active_curves = [p.plot(pen=pg.mkPen(color, width=2)) for p in self.plots]
+        self.current_color_idx = (self.current_color_idx + 1) % len(self.session_colors)
+        color = self.session_colors[self.current_color_idx]
         
-        # 2. 에러 차트에도 새 세션용 선 추가
+        # 새 커브들을 생성 (기존 plots에 겹쳐서 그려짐 = 박제 효과)
+        self.current_active_curves = [p.plot(pen=pg.mkPen(color, width=2.5)) for p in self.plots]
         self.error_history = []
-        self.current_error_curve = self.status_plot.plot(pen=pg.mkPen(color, width=2))
+        self.current_error_curve = self.status_plot.plot(pen=pg.mkPen(color, width=2.0))
 
     def update_view(self, current_features, avg_error, current_threshold):
         if current_features is None: return
-        
-        # "NEW_SESSION" 문자열이 들어오면 새로운 선 세트를 생성함
         if isinstance(current_features, str) and "NEW_SESSION" in current_features:
-            self.start_new_session()
-            return
+            self.start_new_session(); return
 
         try:
-            # Sigma 참조 (항상 Std 섹션 데이터 사용)
-            stds_for_shape = current_features[self.num_features : 2 * self.num_features]
-
-            for i in range(len(self.plots)):
-                mu = current_features[i]
-                feature_idx = i % self.num_features
-                sigma = np.clip(stds_for_shape[feature_idx], 0.15, 4.0)
-                
-                pdf = (1 / (sigma * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((self.x_range - mu) / sigma)**2)
-                
-                # [핵심] 현재 활성화된 세션의 커브만 업데이트 (나머지는 그대로 멈춤)
-                self.current_active_curves[i].setData(self.x_range, pdf)
-                
-                # Y축 자동 조절
-                max_val = max(pdf)
-                self.plots[i].setYRange(0, max_val * 1.1, padding=0)
+            for i, val in enumerate(current_features):
+                if i < len(self.plots):
+                    self._draw_gaussian_stat(i, val)
 
             if avg_error is not None:
-                self.error_history.append(avg_error)
-                if len(self.error_history) > 300: self.error_history.pop(0)
+                err_val = float(avg_error)
+                self.error_history.append(err_val)
+                if len(self.error_history) > 500: self.error_history.pop(0)
+                
+                # [Peak Hold 로직]
+                if err_val > self.max_error_seen:
+                    self.max_error_seen = err_val * 1.2
+                    self.status_plot.setYRange(0, self.max_error_seen, padding=0)
+                
                 self.current_error_curve.setData(self.error_history)
                 self.thresh_line.setValue(current_threshold)
                 
-                bg_color = (180, 0, 0, 50) if avg_error > current_threshold else (18, 18, 18, 255)
-                self.status_plot.getViewBox().setBackgroundColor(bg_color)
+                bg = (70, 0, 0, 80) if err_val > current_threshold else (10, 10, 12, 255)
+                self.status_plot.getViewBox().setBackgroundColor(bg)
         except Exception:
             pass
+
+    def _draw_gaussian_stat(self, plot_idx, val):
+        f_name = self.features[plot_idx]
+        
+        # 기본값 설정
+        mu_visual = 0.5   # 차트 중앙 (0점)
+        sig_visual = 0.07 # 기본 폭
+        
+        # 1. 평균(mean) 지표일 경우: 위치(mu)를 적극적으로 이동
+        if "mean" in f_name:
+            # 보통 물리량 평균은 0보다 큰 경우가 많으므로 범위를 적절히 조절
+            # 예: [-10, 10] 범위를 [0.1, 0.9] 시각적 영역으로
+            mu_visual = np.interp(val, [-10, 10], [0.1, 0.9])
+            
+        # 2. 표준편차(std) 지표일 경우: 종의 폭(sigma)을 조절
+        elif "std" in f_name:
+            # std가 커질수록 종이 옆으로 퍼지게 설정 (0.05 ~ 0.2)
+            sig_visual = np.interp(val, [0, 5], [0.05, 0.2])
+            # std 차트 자체는 중앙(0.5)에 고정하거나 mean과 연동 가능
+            mu_visual = 0.5 
+            
+        # 3. 그 외 (skew, rough, entropy 등): 기존처럼 위치 이동
+        else:
+            mu_visual = np.interp(val, [-10, 10], [0.1, 0.9])
+            sig_visual = 0.07 # 고정 폭
+
+        # 최종 클리핑 및 가우시안 계산
+        mu_visual = np.clip(mu_visual, 0.01, 0.99)
+        gauss = np.exp(-0.5 * ((self.x_range - mu_visual) / sig_visual)**2)
+        
+        # 차트 업데이트
+        self.current_active_curves[plot_idx].setData(self.x_range, gauss)

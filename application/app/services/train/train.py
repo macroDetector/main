@@ -8,7 +8,7 @@ import numpy as np
 import os
 
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler, RobustScaler, QuantileTransformer
+from sklearn.preprocessing import MinMaxScaler
 
 import app.core.globals as g_vars
 import joblib
@@ -22,7 +22,7 @@ from multiprocessing import Queue
 
 from app.utilites.make_df_from_points import make_df_from_points
 from app.utilites.make_sequence import make_seq
-from app.utilites.make_gauss import make_gauss
+
 from app.utilites.save_confing import update_parameters
 from app.utilites.loss_caculation import Loss_Calculation
 
@@ -75,7 +75,7 @@ class TrainMode():
             train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
             val_loader   = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
-            criterion = criterion = nn.L1Loss()
+            criterion = criterion = nn.MSELoss()
             optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=g_vars.weight_decay)
             scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
                 optimizer, mode='min', factor=0.5, patience=5, min_lr=1e-5
@@ -201,22 +201,6 @@ class TrainMode():
             gc.collect()
             torch.cuda.empty_cache()
 
-    def filter_extreme_chunks(self, chunks, threshold_percentile=70):
-        """
-        chunks: (N, 24) numpy array
-        threshold_percentile: 하위 몇 %의 변화량을 가진 청크를 버릴 것인가
-        """
-        # 1. 청크 간의 차이 계산 (Diff)
-        diffs = np.linalg.norm(np.diff(chunks, axis=0), axis=1)
-        
-        # 2. 변화량의 임계치 결정 (예: 상위 30%의 변화만 남김)
-        threshold = np.percentile(diffs, threshold_percentile)
-        
-        # 3. 변화량이 큰 인덱스 추출
-        extreme_indices = np.where(diffs > threshold)[0] + 1
-        
-        return chunks[extreme_indices]
-
     def main(self):
         self.log_queue.put(f"device : {self.device} | SEQ_LEN : {g_vars.SEQ_LEN} | STRIDE : {g_vars.STRIDE}")
 
@@ -228,27 +212,45 @@ class TrainMode():
 
         user_df_chunk= user_df_chunk.sort_values('timestamp').reset_index(drop=True)
 
-        user_df_chunk = user_df_chunk[user_df_chunk["deltatime"] <= g_vars.tolerance * 10].reset_index(drop=True)
+        user_df_chunk = user_df_chunk[user_df_chunk["deltatime"] <= g_vars.filter_tolerance].reset_index(drop=True)
+
+        pd.options.display.float_format = '{:,.4f}'.format
+        def print_box(title, content, color_code="36"): # 36: Cyan, 32: Green, 33: Yellow
+            width = 60
+            print(f"\033[{color_code}m" + "="*width)
+            print(f"  {title.center(width-4)}")
+            print("="*width + "\033[0m")
+            print(content)
+            print("\033[" + color_code + "m" + "-"*width + "\033[0m\n")
 
         # ===== 지표 생성 ======
-        setting_user_df_chunk: pd.DataFrame = indicators_generation(user_df_chunk)
-        setting_user_df_chunk = setting_user_df_chunk[g_vars.FEATURES].copy()
-        print("✅ 지표 생성 성공")
+        setting_user_df_chunk: pd.DataFrame = indicators_generation(
+            df_chunk=user_df_chunk, 
+            chunk_size=g_vars.chunk_size, 
+            offset=g_vars.offset
+        )
 
+        setting_user_df_chunk = setting_user_df_chunk[g_vars.FEATURES].copy()
+
+        stats_before = setting_user_df_chunk[g_vars.FEATURES].agg(['min', 'max', 'mean', 'std']).T
+        print_box("📊 RAW DATA STATISTICS (Before Scaling)", stats_before, "33")        
+        print("✅ 지표 생성 성공")
+        
         # ==== 스케일 작업 =====
-        scaler = RobustScaler()
+        scaler = MinMaxScaler()
 
         scaled_array = scaler.fit_transform(setting_user_df_chunk[g_vars.FEATURES])
+        scaled_array = scaled_array * 10 # 테스트 10배
         chunks_scaled_df = pd.DataFrame(scaled_array, columns=g_vars.FEATURES)
+
         base_dir = g_vars.scaler_path
         final_save_path = os.path.join(base_dir, f"{filename}_scaler.pkl")
-        
+        stats_after = chunks_scaled_df.agg(['min', 'max', 'mean', 'std']).T
+        print_box("🚀 SCALED DATA STATISTICS ", stats_after, "32")
         joblib.dump(scaler, final_save_path)
         print(f"✅ Cliping Save")
         
-        chunks_scaled = make_gauss(data=chunks_scaled_df, chunk_size=g_vars.chunk_size, chunk_stride=1, offset=20)
-
-        final_input:np.array = make_seq(data=chunks_scaled, seq_len=g_vars.SEQ_LEN, stride=g_vars.STRIDE)
+        final_input:np.array = make_seq(data=chunks_scaled_df, seq_len=g_vars.SEQ_LEN, stride=g_vars.STRIDE)
 
         print(f"✅ 최종 시퀀스 Shape: {final_input.shape}")
         print(f"🚀 첫 번째 시퀀스 내부 덩어리 예시:\n{final_input[0][0]}")

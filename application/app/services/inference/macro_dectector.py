@@ -72,14 +72,23 @@ def inferece_plot_main(chart_queue: Queue, features, threshold, chart_view, proc
     
 
 class MacroDetector:
-    def __init__(self, model_path: str, scale_path:str, seq_len=g_vars.SEQ_LEN, threshold=None, device=None, chart_Show=True, stop_event=None):
+    def __init__(
+            self, 
+            model_path: str, 
+            scale_path:str, 
+            seq_len=g_vars.SEQ_LEN, 
+            threshold=None, 
+            device=None, 
+            chart_Show=True, 
+            stop_event=None,
+            log_queue:Queue=None):
+        
         self.seq_len = seq_len
         self.base_threshold = threshold if threshold is not None else g_vars.threshold
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
-
-        self.allowable_add_data = g_vars.chunk_size + g_vars.SEQ_LEN + 10 # offset 수준
-
-        self.buffer = deque(maxlen=self.allowable_add_data)
+        self.log_queue = log_queue
+        # 안정 장치
+        self.buffer = deque(maxlen=10)
 
         self.stop_event = stop_event
         self.chart_Show = chart_Show
@@ -103,12 +112,6 @@ class MacroDetector:
     def push(self, data: dict):
         self.buffer.append((data.get('x'), data.get('y'), data.get('timestamp'), data.get('deltatime')))
         
-        # 최소 seq_len + 1은 채워져야 분석 시작
-        if len(self.buffer) < self.allowable_add_data:
-            return None
-        
-        return self._infer()
-
     def start_plot_process(self):
         """실시간 차트 프로세스를 시작합니다."""
         if not self.chart_Show or (self.plot_proc and self.plot_proc.is_alive()):
@@ -132,52 +135,66 @@ class MacroDetector:
 
     def _infer(self):
         df = pd.DataFrame(list(self.buffer), columns=["x", "y", "timestamp", "deltatime"])
+    
+        df = df[df["deltatime"] <= g_vars.filter_tolerance].reset_index(drop=True)
         
-        df = df[df["deltatime"] <= g_vars.tolerance * 10].reset_index(drop=True)
-        
-        df = indicators_generation(df)
+        df = indicators_generation(
+            df_chunk=df, 
+            chunk_size=g_vars.chunk_size,
+            offset=g_vars.offset
+        )
 
+        if len(df) < g_vars.SEQ_LEN:
+            return None
+                
         df_filter_chunk = df[g_vars.FEATURES].copy()
         
         chunks_scaled_array = self.scaler.transform(df_filter_chunk)
         
         chunks_scaled_df = pd.DataFrame(chunks_scaled_array, columns=g_vars.FEATURES)
-        chunks_scaled = make_gauss(data=chunks_scaled_df, chunk_size=g_vars.chunk_size, chunk_stride=1, offset=10, train_mode=False)
         
-        if len(chunks_scaled) < g_vars.SEQ_LEN:
-            return None
+        chunks_scaled_df = chunks_scaled_df * 10 # train이랑 동일 하게
+  
+        final_input:np.array = make_seq(data=chunks_scaled_df, seq_len=g_vars.SEQ_LEN, stride=1)
         
-        final_input:np.array = make_seq(data=chunks_scaled, seq_len=g_vars.SEQ_LEN, stride=1)
+        send_data = []
+        for i, input in enumerate(final_input):
+            if self.stop_event.is_set():
+                if self.log_queue:
+                    self.log_queue.put("🛑 Detector 중지")
+                else:
+                    print("🛑 Detector 중지")
+                break            
+            last_seq = torch.tensor(input, dtype=torch.float32).unsqueeze(0).to(self.device)
 
-        last_seq = torch.tensor(final_input[-1], dtype=torch.float32).unsqueeze(0).to(self.device)
-        
-        if last_seq.shape[1] < g_vars.SEQ_LEN:
-            return None
+            with torch.no_grad():
+                output = self.model(last_seq)
 
-        with torch.no_grad():
-            output = self.model(last_seq)
+                sample_errors = Loss_Calculation(outputs=output, batch=last_seq).item()
 
-            sample_errors = Loss_Calculation(outputs=output, batch=last_seq).item()
+                # 임계치 판정 logic
+                is_human = sample_errors <= self.base_threshold
+                
+            if g_vars.CHART_DATA is not None:
+                try:
+                    # chunks_scaled_df에서 현재 시퀀스의 '끝 지점' 데이터를 추출하여 전송
+                    # 보통 시퀀스의 마지막 타임스텝 데이터를 특징값으로 봅니다.
+                    current_features = chunks_scaled_df.iloc[i + g_vars.SEQ_LEN - 1] 
+                    g_vars.CHART_DATA.put_nowait((current_features, sample_errors, self.base_threshold))
+                except Exception: 
+                    pass
 
-            # 임계치 판정 logic
-            is_human = sample_errors <= self.base_threshold
+            _error = sample_errors / self.base_threshold * 100
+                    
+            send_data.append({
+                "is_human": is_human,
+                "error_pct": _error, 
+            })
             
-            if not is_human:
-                if hasattr(self, 'log_queue'):
-                    print(f"🚨 [DETECTION] Error: {sample_errors:.4f}")
+        
+            # 메시지 구성
+            log_text = f"{is_human}, {_error:.4f} %"
 
-        if g_vars.CHART_DATA is not None:
-            try:
-                # 시각화 프로세스에 현재 시퀀스의 특징값(평균)과 오차 정보를 보냄
-                current_features_mean = chunks_scaled[-1] # 가장 최신 시점의 스케일링된 지표들
-                g_vars.CHART_DATA.put_nowait((current_features_mean, sample_errors, self.base_threshold))
-            except Exception: 
-                pass
+            self.log_queue.put(log_text) if self.log_queue else print(log_text)
 
-        return {
-            "is_human": is_human,
-            "macro_probability": "🚨 MACRO" if not is_human else "🙂 HUMAN",
-            "prob_value": sample_errors, # score 대신 error 값 전달
-            "raw_error": round(sample_errors, 5),
-            "threshold": self.base_threshold
-        }
+        return send_data

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import SendData from './services/send_record';
+import {SendData} from './services/send_record';
 import './styles/security_section.scss'
 import PatternGame from "./pattern_trajectory";
 
@@ -19,7 +19,7 @@ export default function Record() {
     const last_ts = useRef(performance.now());
     
     const tolerance = 0.001;
-    const MAX_QUEUE_SIZE = 750;
+    const MAX_QUEUE_SIZE = 350;
 
     const on_move = (e) => {
         if (isDragging == true) {

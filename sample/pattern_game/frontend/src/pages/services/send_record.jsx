@@ -1,4 +1,4 @@
-export default async function SendData(data) {
+export async function SendData(data) {
   try {
     const res = await fetch(
       `${import.meta.env.VITE_POST_URL}/api/get_points`,
@@ -49,4 +49,31 @@ export default async function SendData(data) {
     console.error("SendData failed:", err);
     return false;
   }
+}
+
+export async function SendDataLive(data) {
+  let socket = null;
+
+  socket = new WebSocket(`${import.meta.env.VITE_POST_URL_WS}/ws/get_points_live`);
+
+  socket.onopen = () => {
+    console.log("WebSocket 연결이 열렸습니다.");
+    socket.send(JSON.stringify(data));
+  };
+
+  socket.onmessage = (event) => {
+    const result = JSON.parse(event.data);
+    // 서버에서 온 판정 결과(Human/Macro) 처리
+    console.log("서버 응답:", result);
+  };  
+  
+  socket.onerror = (err) => {
+    console.error("❌ 웹소켓 에러:", err);
+  };
+
+  socket.onclose = () => {
+    console.log("🛑 연결 종료. 재연결 시도...");
+    socket = null;
+    // 필요 시 setTimeout으로 재연결 로직 추가
+  };  
 }

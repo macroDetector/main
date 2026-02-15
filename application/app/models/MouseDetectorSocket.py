@@ -8,5 +8,5 @@ class RequestBody(BaseModel):
 class ResponseBody(BaseModel):
     id: str
     status: int
-    analysis_results: List[str]
+    analysis_results: List[dict]
     message: Optional[str] = None
