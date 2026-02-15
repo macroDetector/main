@@ -1,3 +1,0 @@
-move_data에 .접두사(macro_, user_) 지우고 등록
-2개의 데이터 경로는 동일 macro는 기록기, user는 아날로그 기록
-경로 검증은 user 폴더에 넣고 plot 생성

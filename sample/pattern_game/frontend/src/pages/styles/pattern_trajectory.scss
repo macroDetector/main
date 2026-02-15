@@ -1,0 +1,164 @@
+$bg-color: transparent;
+$container-bg: transparent;
+$player-color: #3498db;
+$target-color: #e74c3c; 
+$success-color: #10b981;
+$dot-color: #475569;
+
+@use "sass:color";
+
+// 2. 기본 레이아웃
+.game-wrapper {
+  width: 500px;
+  height: 500px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  background-color: $bg-color;
+  user-select: none; // 드래그 시 텍스트 선택 방지
+  font-family: 'Pretendard', -apple-system, sans-serif;
+
+  // 상단 정보 영역
+  .header-info {
+    text-align: center;
+    margin-bottom: 0.8em;
+    .score-board {
+      color: $player-color;
+      font-size: 2rem;
+      font-weight: 900;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .mission-text {
+      color: #94a3b8;
+      font-size: 1.1rem;
+      font-weight: 500;
+      letter-spacing: 1px;
+      margin-bottom: 0.5rem;
+    }
+
+    .distance-display {
+      display: inline-block;
+      background: transparent;
+      padding: 0.6rem 1.8rem;
+      color: black;
+      font-family: 'Courier New', monospace;
+      font-size: 1.0rem;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(5px);
+      transition: all 0.2s ease;
+      
+      span {
+        color: $target-color;
+        font-weight: bold;
+        display: inline-block;
+        min-width: 50px;
+      }
+
+      // 5px 이내로 들어왔을 때 강조 스타일
+      &.in-range {
+        border-color: $success-color;
+        box-shadow: 0 0 15px rgba($success-color, 0.3);
+        span {
+          color: $success-color;
+        }
+      }
+    }
+  }
+
+  // 3. 게임 컨테이너 (그리드 판)
+  .pattern-container {
+    position: relative;
+    background-color: $container-bg;
+    border-radius: 35px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+    border: 2px solid rgba(255, 255, 255, 0.05); // lighten 대신 rgba로 에러 방지
+    cursor: grab;
+    overflow: visible; // 구가 경계선에 걸칠 때 잘리지 않도록
+
+    &.dragging {
+      cursor: grabbing;
+      border-color: rgba($player-color, 0.4);
+    }
+
+    // 배경 그리드 점
+    .grid-dot {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background-color: $dot-color;
+      border-radius: 50%;
+      transform: translate(-50%, -50%); // 중심 정렬
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+      // 목표 지점일 때
+      &.is-target {
+        width: 20px;
+        height: 20px;
+        background-color: $target-color;
+        box-shadow: 0 0 25px $target-color;
+        z-index: 5;
+      }
+
+      // 목표 지점 펄스 애니메이션
+      .target-pulse {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        border-radius: 50%;
+        background-color: $target-color;
+        animation: pulse 1.6s infinite;
+        pointer-events: none;
+      }
+    }
+
+    // 플레이어 구 (파란 공)
+    .player-ball {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      
+      // [핵심] 마이너스 마진으로 중심 보정 (드래그 시 튀는 현상 해결)
+      margin-left: -16px; 
+      margin-top: -16px;
+
+      background-color: $player-color;
+      border: 3px solid #ffffff;
+      border-radius: 50%;
+      box-shadow: 0 0 25px rgba($player-color, 0.6);
+      z-index: 10;
+      
+      // 주의: 여기서 transform: translate(-50%, -50%)를 쓰면 
+      // Framer Motion의 x, y와 충돌하여 위치가 어긋납니다. 절대 금지!
+    }
+  }
+
+  // 하단 안내 문구
+  .guide-text {
+    color: #64748b;
+    margin-top: 2.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    
+    span {
+      color: color.scale($target-color, $lightness: 10%);
+      font-weight: 700;
+      text-decoration: underline;
+    }
+  }
+}
+
+// 4. 애니메이션 키프레임
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
