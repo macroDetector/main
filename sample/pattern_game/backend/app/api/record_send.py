@@ -5,7 +5,8 @@ import json
 from datetime import datetime
 from QMacroDetector import Pattern_Game, MousePoint
 from QMacroDetector.Response import ResponseBody
-import dataclasses
+import numpy as np
+from scipy import stats
 
 router = APIRouter()
 
@@ -14,7 +15,7 @@ if not os.path.exists(SAVE_DIR):
     os.makedirs(SAVE_DIR, exist_ok=True)
 
 @router.post("/get_points")
-async def get_mouse_pointer(data: List[MousePoint]):
+async def get_mouse_pointer(data: List[MousePoint]):   
     try:
         json_ready_data = [
             {
@@ -35,8 +36,16 @@ async def get_mouse_pointer(data: List[MousePoint]):
     except Exception as e:
         print(f"❌ 데이터 저장 실패: {e}")
 
-    result = Pattern_Game().get_macro_result(data)
+    result:ResponseBody = Pattern_Game().get_macro_result(data)
 
-    result_dict = dataclasses.asdict(result)
+    received_data:list = result.data
 
-    print(json.dumps(result_dict, ensure_ascii=False, indent=4))
+    print(received_data)
+    
+    error_mean = stats.trim_mean(received_data, proportiontocut=0.05)
+    
+    print(error_mean)
+    return {
+        "status" : 0,
+        "message" : float(error_mean)
+    }

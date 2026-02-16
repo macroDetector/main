@@ -45,7 +45,13 @@ Detection Logic
 
 ### 📦 Libray 지원
 
-```bash
+```
 pip install git+https://github.com/qqqqaqaqaqq/mouseMacroLibrary.git
+```
 
 ---
+
+## 🎥 Test 영상
+
+[![Watch the video](https://img.youtube.com/vi/DGrR67CppsU/maxresdefault.jpg)]
+(https://youtu.be/DGrR67CppsU)
