@@ -1,143 +1,135 @@
-@use "sass:color"; // 최신 Sass 함수 사용을 위해 필수
+@use "sass:color";
 
-// 변수 설정
 $primary-color: #007bff;
 $bg-color: #f8f9fa;
 $card-bg: #ffffff;
-$text-main: #212529;
-$text-muted: #999;
-$border-color: #eee;
+$success-color: #61c9aa;
+$text-main: #333;
+$text-muted: #adb5bd;
 
 .security-container {
   background: $bg-color;
-  color: $text-main;
-  padding: 2.5rem;
+  padding: 1.5rem;
   border-radius: 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.05);
-  max-width: 600px;
-  margin: 2rem auto;
+  
+  width: calc(100% - 2rem); 
+  max-width: 500px;
+  margin: 1rem auto;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  overscroll-behavior: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+
+  @media (max-width: 480px) { padding: 1rem; width: calc(100% - 1rem); }
+
+  // 1. 모드 선택 버튼 (추가된 부분)
+  .mode-selector {
+    display: inline-flex;
+    background: #eee;
+    padding: 4px;
+    border-radius: 16px;
+    margin-bottom: 24px;
+    width: fit-content;
+
+    button {
+      padding: 10px 24px;
+      border-radius: 12px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: #999;
+      text-transform: uppercase;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+      &:hover:not(.active) {
+        color: #666;
+      }
+
+      &.active {
+        background: $card-bg;
+        color: $primary-color;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+    }
+  }
+
+  .loading-overlay {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba($card-bg, 0.85); backdrop-filter: blur(10px);
+    z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center;
+    .loader {
+      width: 40px; height: 40px; border: 4px solid #f1f3f5;
+      border-top: 4px solid $primary-color; border-radius: 50%; animation: spin 1s linear infinite;
+    }
+    p { margin-top: 1rem; color: $primary-color; font-weight: 700; animation: blink 1.5s infinite; }
+  }
+
+  .content-wrapper {
+    width: 100%; transition: all 0.4s ease;
+    &.blur { filter: blur(6px); opacity: 0.5; pointer-events: none; transform: scale(0.97); }
+  }
 
   .security-header {
-    display: flex;
-    gap: 1.2rem;
-    margin-bottom: 2rem;
-    width: 100%;
-    justify-content: center;
-
+    display: flex; gap: 0.5rem; margin-bottom: 1.5rem; width: 100%;
     .stat-box {
-      background: $card-bg;
-      padding: 1.2rem 1.5rem;
-      border-radius: 16px;
-      text-align: center;
-      border: 1px solid $border-color;
-      flex: 1;
-      position: relative;
-      overflow: hidden;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
-
-      &.highlighted {
-        border-color: rgba($primary-color, 0.3);
-        background: rgba($primary-color, 0.02);
-      }
-
-      .label {
-        display: block;
-        font-size: 0.7rem;
-        color: $text-muted;
-        font-weight: 700;
-        letter-spacing: 0.8px;
-        margin-bottom: 0.4rem;
-        text-transform: uppercase;
-      }
-
-      .value {
-        font-size: 1.6rem;
-        font-weight: 900;
-        color: #333;
-        font-variant-numeric: tabular-nums;
-      }
-
-      .progress-bar {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        height: 5px;
-        background: #f1f3f5;
-
-        .fill {
-          height: 100%;
-          background: $primary-color;
-          transition: width 0.15s ease-out;
-          box-shadow: 0 0 8px rgba($primary-color, 0.4);
-        }
-      }
+      background: $card-bg; padding: 0.8rem 0.2rem; border-radius: 12px; border: 1px solid #eee;
+      flex: 1; text-align: center; position: relative; overflow: hidden;
+      .label { display: block; font-size: 0.6rem; color: $text-muted; font-weight: 700; margin-bottom: 0.2rem; }
+      .value { font-size: 1.1rem; font-weight: 900; color: $text-main; }
     }
   }
 
   .security-area {
-    background: $card-bg;
-    // darken($bg-color, 5%)를 color.adjust로 교체
-    border: 1px solid color.adjust($bg-color, $lightness: -5%);
-    border-radius: 20px;
-    cursor: crosshair;
-    padding: 0;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
-    overflow: hidden;
-    position: relative;
-    transition: transform 0.2s ease;
+    background: $card-bg; border: 1px solid #eee; border-radius: 20px;
+    width: 100%; aspect-ratio: 1 / 1;
+    touch-action: none !important; overflow: hidden; position: relative;
+    display: flex; justify-content: center; align-items: center;
+    cursor: pointer;
+  }
 
-    &:active {
-      transform: scale(0.995);
+  // 각 게임별 내부 레이아웃 유지
+  .game-wrapper, .circular-unlock-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .pattern-container {
+    .grid-dot {
+      width: 18px; height: 18px; background: #f1f3f5; border-radius: 50%; transform: translate(-50%, -50%);
+      &.is-target { background: $success-color; box-shadow: 0 0 15px rgba($success-color, 0.4); z-index: 2; }
+    }
+    .player-ball {
+      width: 36px; height: 36px; border-radius: 50%; z-index: 10; border: 3px solid #fff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      pointer-events: none;
     }
   }
 
   .security-panel {
-    margin-top: 1.5rem;
-    text-align: center;
-
+    margin-top: 1.2rem; text-align: center;
     .status-indicator {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      justify-content: center;
-      margin-bottom: 0.8rem;
-
-      .dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: #dee2e6;
-        transition: all 0.3s ease;
-
-        &.active {
-          background: $primary-color;
-          box-shadow: 0 0 12px rgba($primary-color, 0.6);
-          animation: status-blink 1.2s infinite;
-        }
+      display: flex; align-items: center; gap: 0.5rem; justify-content: center;
+      .dot { 
+        width: 8px; height: 8px; border-radius: 50%; background: #dee2e6; 
+        &.active { background: $primary-color; box-shadow: 0 0 8px rgba($primary-color, 0.5); animation: status-blink 1.2s infinite; }
       }
-
-      span {
-        font-size: 0.85rem;
-        font-weight: 600;
-        color: #555;
-        letter-spacing: 0.5px;
-      }
+      span { font-size: 0.75rem; font-weight: 700; color: #666; }
     }
-
-    .hint {
-      font-size: 0.75rem;
-      color: #bbb;
-      line-height: 1.5;
-    }
+    .hint { font-size: 0.65rem; color: #bbb; margin-top: 0.5rem; line-height: 1.4; word-break: keep-all; }
   }
 }
 
-@keyframes status-blink {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.9); }
-}
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes blink { 50% { opacity: 0.5; } }
+@keyframes status-blink { 50% { opacity: 0.5; transform: scale(0.9); } }

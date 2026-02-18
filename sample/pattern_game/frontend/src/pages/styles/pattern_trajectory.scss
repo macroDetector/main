@@ -5,26 +5,43 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #fff;
+  background-color: transparent; // 부모 컨테이너 디자인을 따르도록 투명화
+  width: 100%;
+  padding: 1rem 0;
+  
+  // 모바일 텍스트 드래그 및 길게 누르기 메뉴 방지
+  user-select: none;
+  -webkit-touch-callout: none;
 
   .pattern-container {
     position: relative;
     background: #ffffff;
     user-select: none;
+    border-radius: inherit; // 부모의 굴곡을 유지
     
+    // 모바일에서 영역 밖으로 나가는 현상 방지
+    max-width: 100%; 
+    touch-action: none; // 브라우저 기본 스크롤/줌 방지 핵심
+
     .grid-dot {
       position: absolute;
-      width: 30px;
-      height: 30px;
+      width: 24px; // 모바일 가독성을 위해 살짝 축소
+      height: 24px;
       background: #f1f3f5;
       border-radius: 50%;
       transform: translate(-50%, -50%);
       transition: background 0.3s ease, box-shadow 0.3s ease;
       
+      @media (max-width: 480px) {
+        width: 18px; // 더 작은 화면에서는 더 작게
+        height: 18px;
+      }
+
       &.is-target {
         background: #61c9aa;
-        box-shadow: 0 0 15px rgba(0, 123, 255, 0.4);
+        box-shadow: 0 0 20px rgba(97, 201, 170, 0.5);
         z-index: 2;
+        border: 2px solid #fff;
       }
     }
 
@@ -32,13 +49,18 @@
       position: absolute;
       width: 44px;
       height: 44px;
-      border: 2px solid rgba(0, 123, 255, 0.2);
+      border: 2px solid rgba(97, 201, 170, 0.4); // 타겟 색상과 통일감
       border-radius: 50%;
       left: 50%;
       top: 50%;
       transform: translate(-50%, -50%);
       animation: target-expand 2s infinite ease-out;
       pointer-events: none;
+
+      @media (max-width: 480px) {
+        width: 36px;
+        height: 36px;
+      }
     }
 
     .player-ball {
@@ -47,12 +69,24 @@
       height: 40px;
       border-radius: 50%;
       z-index: 10;
-      cursor: pointer;
-      border: 2px solid #fff;
+      cursor: grab;
+      border: 3px solid #fff; // 공이 배경과 겹칠 때 시인성 확보
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
       
-      &:hover {
-        // 기존 filter: brightness 유지하거나 color.adjust로 배경색 직접 제어 가능
-        filter: brightness(1.05);
+      // 모바일 터치 영역 확장 (실제 공보다 조금 더 넓게 인식되도록)
+      &::after {
+        content: '';
+        position: absolute;
+        top: -10px; left: -10px; right: -10px; bottom: -10px;
+      }
+
+      &:active {
+        cursor: grabbing;
+      }
+
+      @media (max-width: 480px) {
+        width: 36px;
+        height: 36px;
       }
     }
   }

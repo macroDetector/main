@@ -52,7 +52,7 @@ class RealTimeMonitor:
         p.addItem(pg.InfiniteLine(pos=0.5, angle=90, pen=pg.mkPen('#333333', width=1, style=Qt.PenStyle.DashLine)))
 
     def _setup_error_trace_layout(self, threshold):
-        self.win.addLabel("<br><b><span style='color: #FF4444; font-size: 11pt;'>🚨 ANOMALY SCORE (MAE)</span></b>", colspan=5)
+        self.win.addLabel("<br><b><span style='color: #FF4444; font-size: 11pt;'>🚨 ANOMALY SCORE</span></b>", colspan=5)
         self.win.nextRow()
         self.status_plot = self.win.addPlot(colspan=5)
         self.status_plot.setFixedHeight(200)

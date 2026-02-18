@@ -43,8 +43,9 @@ dim_feedforward = settings.dim_feedforward
 
 weight_threshold = settings.weight_threshold
 
-filter_tolerance = tolerance * 100
-offset = chunk_size + 10
+filter_tolerance = tolerance * 50
+offset = 0
+scale_array = 10
 
 GLOBAL_CHANGE = False
 

@@ -8,7 +8,7 @@ import numpy as np
 import os
 
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, RobustScaler
 
 import app.core.globals as g_vars
 import joblib
@@ -75,7 +75,6 @@ class TrainMode():
             train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
             val_loader   = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
-            criterion = criterion = nn.MSELoss()
             optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=g_vars.weight_decay)
             scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
                 optimizer, mode='min', factor=0.5, patience=5, min_lr=1e-5
@@ -96,12 +95,33 @@ class TrainMode():
                 total_train_loss = 0
                 for batch_x in train_loader:
                     batch_x = batch_x.to(device)
+
+                    # ===== 🔥 Input noise + mask =====
+                    noise_std = max(0.2 * (1 - epoch / 40), 0.05)
+                    noise = torch.randn_like(batch_x) * noise_std
+                    noisy_input = batch_x + noise
+
+                    mask_prob = 0.15  # 조금 더 공격적으로
+                    mask = (torch.rand_like(noisy_input) < mask_prob).float()
+                    noisy_input = noisy_input * (1 - mask)
+
+                    noisy_input = torch.clamp(noisy_input, 0.0, 10.0)
+
                     optimizer.zero_grad()
-                    outputs = model(batch_x)
-                    loss = criterion(outputs, batch_x)
+
+                    # ===== 🔥 Forward + latent noise =====
+                    # forward에서 latent noise를 넣도록 모델 수정 필요
+                    outputs = model(noisy_input, add_latent_noise=True, latent_noise_std=0.03)
+
+                    sample_errors = Loss_Calculation(outputs=outputs, batch=batch_x)
+
+                    loss = sample_errors.mean()
+                    
                     loss.backward()
+
                     torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
                     optimizer.step()
+
                     total_train_loss += loss.item() * batch_x.size(0)
 
                 avg_train_loss = total_train_loss / len(train_dataset)
@@ -120,7 +140,7 @@ class TrainMode():
                         
                         all_val_errors.extend(sample_errors.cpu().numpy())
                         
-                        loss = criterion(outputs, batch_x)
+                        loss = sample_errors.mean()
                         total_val_loss += loss.item() * batch_x.size(0)
 
                 avg_val_loss = total_val_loss / len(val_dataset)
@@ -138,25 +158,10 @@ class TrainMode():
 
                 errors = np.array(all_val_errors)
 
-                # 1. 중앙값과 MAD 계산 (이상치에 절대 안 휘둘림)
                 median_e = np.median(errors)
                 mad_e = np.median(np.abs(errors - median_e))
 
-                # 2. 통계적으로 '정상 범위' 밖의 에러들(Outliers)을 완전히 제외하고 다시 계산
-                # 보통 Median + 3 * (1.4826 * MAD) 밖의 값은 쓰레기 데이터로 봅니다.
-                upper_limit = median_e + (3 * 1.4826 * mad_e)
-                refined_errors = errors[errors < upper_limit]
-
-                # 3. 정제된 에러들로만 다시 평균, 표준편차 계산
-                m_e = np.mean(refined_errors)
-                s_e = np.std(refined_errors)
-
-                # 4. 여기서 배수(Multiplier) 5.0~6.0 적용
-                multiplier = 6.0 
-                current_epoch_threshold = m_e + (multiplier * s_e)
-
-                # 5. 안전장치: 현재 Val(평균)보다는 커야 함
-                current_epoch_threshold = max(current_epoch_threshold, np.mean(errors) * 1.2)
+                current_epoch_threshold = median_e + 4.0 * 1.4826 * mad_e
 
                 # 로그 출력
                 status_msg = f"Epoch {epoch+1} | Train: {avg_train_loss:.6f} | Val: {avg_val_loss:.6f} | Thres: {current_epoch_threshold:.6f}"
@@ -240,7 +245,7 @@ class TrainMode():
         scaler = MinMaxScaler()
 
         scaled_array = scaler.fit_transform(setting_user_df_chunk[g_vars.FEATURES])
-        scaled_array = scaled_array * 10 # 테스트 10배
+        scaled_array = scaled_array * g_vars.scale_array
         chunks_scaled_df = pd.DataFrame(scaled_array, columns=g_vars.FEATURES)
 
         base_dir = g_vars.scaler_path
@@ -254,7 +259,11 @@ class TrainMode():
 
         print(f"✅ 최종 시퀀스 Shape: {final_input.shape}")
         print(f"🚀 첫 번째 시퀀스 내부 덩어리 예시:\n{final_input[0][0]}")
-
+        print(f"🚀 첫 번째 시퀀스 내부 덩어리 예시:\n{final_input[0][1]}")
+        print(f"🚀 첫 번째 시퀀스 내부 덩어리 예시:\n{final_input[0][2]}")
+        print(f"🚀 첫 번째 시퀀스 내부 덩어리 예시:\n{final_input[0][3]}")
+        print(f"🚀 첫 번째 시퀀스 내부 덩어리 예시:\n{final_input[0][4]}")
+        
         # ==== 데이터 셋 정의 ====
         train, val = train_test_split(final_input, test_size=0.2, shuffle=True)
 

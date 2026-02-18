@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+numpy
+scipy
+numba
+QMacroDetector @ git+https://github.com/qqqqaqaqaqq/mouseMacroLibrary.git

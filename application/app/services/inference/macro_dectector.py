@@ -143,7 +143,7 @@ class MacroDetector:
             chunk_size=g_vars.chunk_size,
             offset=g_vars.offset
         )
-
+        
         if len(df) < g_vars.SEQ_LEN:
             return None
                 
@@ -153,7 +153,7 @@ class MacroDetector:
         
         chunks_scaled_df = pd.DataFrame(chunks_scaled_array, columns=g_vars.FEATURES)
         
-        chunks_scaled_df = chunks_scaled_df * 10 # train이랑 동일 하게
+        chunks_scaled_df = chunks_scaled_df * g_vars.scale_array
   
         final_input:np.array = make_seq(data=chunks_scaled_df, seq_len=g_vars.SEQ_LEN, stride=1)
         
@@ -170,7 +170,7 @@ class MacroDetector:
             with torch.no_grad():
                 output = self.model(last_seq)
 
-                sample_errors = Loss_Calculation(outputs=output, batch=last_seq).item()
+                sample_errors = Loss_Calculation(outputs=output, batch=last_seq).mean().item()
 
                 # 임계치 판정 logic
                 is_human = sample_errors <= self.base_threshold

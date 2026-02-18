@@ -2,88 +2,129 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { motion, useMotionValue, animate } from "framer-motion";
 import "./styles/pattern_trajectory.scss";
 
-const CONFIG = {
-  GRID_SIZE: 3,
-  SPACING: 100,
-  OFFSET: 80,
-  ARRIVAL_THRESHOLD: 20,
-};
-
 export default function PatternGame({ isDragging, setIsDragging, setScore }) {
   const containerRef = useRef(null);
-  const [targetIdx, setTargetIdx] = useState(4);
+  const [targetIdx, setTargetIdx] = useState(4); // 초기 타겟은 중앙
   const targetIdxRef = useRef(targetIdx);
   const isUpdating = useRef(false);
+  
+  // 모바일 대응을 위한 가변 사이즈 상태
+  const [dimensions, setDimensions] = useState({ size: 300, spacing: 80, offset: 70 });
 
-  const containerSize = (CONFIG.GRID_SIZE - 1) * CONFIG.SPACING + CONFIG.OFFSET * 2;
+  // 1. 부모 너비에 맞게 그리드 크기 재계산 (짤림 방지)
+  useEffect(() => {
+    const updateSize = () => {
+      if (!containerRef.current) return;
+      const parentWidth = containerRef.current.parentElement.offsetWidth;
+      const availableSize = Math.min(parentWidth, 400); // 최대 400px
+      
+      setDimensions({
+        size: availableSize,
+        spacing: availableSize * 0.3, 
+        offset: availableSize * 0.2
+      });
+    };
 
+    updateSize();
+    window.addEventListener("resize", updateSize);
+    return () => window.removeEventListener("resize", updateSize);
+  }, []);
+
+  // 2. 그리드 좌표 생성
   const gridPoints = useMemo(() => {
     const points = [];
-    for (let row = 0; row < CONFIG.GRID_SIZE; row++) {
-      for (let col = 0; col < CONFIG.GRID_SIZE; col++) {
+    const { spacing, offset } = dimensions;
+    for (let row = 0; row < 3; row++) {
+      for (let col = 0; col < 3; col++) {
         points.push({
-          x: col * CONFIG.SPACING + CONFIG.OFFSET,
-          y: row * CONFIG.SPACING + CONFIG.OFFSET,
+          x: col * spacing + offset,
+          y: row * spacing + offset,
         });
       }
     }
     return points;
-  }, []);
+  }, [dimensions]);
 
-  const mX = useMotionValue(gridPoints[4].x);
-  const mY = useMotionValue(gridPoints[4].y);
+  const mX = useMotionValue(0);
+  const mY = useMotionValue(0);
 
+  // 초기 위치 설정
   useEffect(() => {
-    targetIdxRef.current = targetIdx;
-    isUpdating.current = false;
-  }, [targetIdx]);
+    if (gridPoints[4]) {
+      mX.set(gridPoints[4].x);
+      mY.set(gridPoints[4].y);
+    }
+  }, [gridPoints, mX, mY]);
 
-  // 중앙 복귀 애니메이션 (isDragging이 false가 될 때 실행)
+  // 비활성화(초기화) 시 공을 중앙으로 복귀시킴
   useEffect(() => {
-    if (!isDragging) {
-      animate(mX, gridPoints[4].x, { type: "spring", stiffness: 200, damping: 25 });
-      animate(mY, gridPoints[4].y, { type: "spring", stiffness: 200, damping: 25 });
+    if (!isDragging && gridPoints[4]) {
+      animate(mX, gridPoints[4].x, { type: "spring", stiffness: 250, damping: 30 });
+      animate(mY, gridPoints[4].y, { type: "spring", stiffness: 250, damping: 30 });
+      setTargetIdx(4); // 타겟도 중앙으로 리셋
     }
   }, [isDragging, gridPoints, mX, mY]);
 
-  // 좌표 추적 및 클램핑 (영역 밖으로 나가지 않도록 제한)
+  // 3. 마우스/터치 이동에 따른 공의 위치 업데이트
   useEffect(() => {
-    const handleGlobalMove = (e) => {
+    const handleMove = (e) => {
       if (!isDragging || !containerRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
-      
-      let nextX = e.clientX - rect.left;
-      let nextY = e.clientY - rect.top;
 
-      // 영역 내로 좌표 강제 고정 (Clamping)
-      nextX = Math.max(0, Math.min(nextX, containerSize));
-      nextY = Math.max(0, Math.min(nextY, containerSize));
+      const rect = containerRef.current.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      
+      let nextX = clientX - rect.left;
+      let nextY = clientY - rect.top;
+
+      // 영역 내부로 제한
+      nextX = Math.max(0, Math.min(nextX, dimensions.size));
+      nextY = Math.max(0, Math.min(nextY, dimensions.size));
 
       mX.set(nextX);
       mY.set(nextY);
     };
 
     if (isDragging) {
-      window.addEventListener("mousemove", handleGlobalMove);
+      window.addEventListener("mousemove", handleMove);
+      window.addEventListener("touchmove", handleMove, { passive: false });
     }
-    return () => window.removeEventListener("mousemove", handleGlobalMove);
-  }, [isDragging, mX, mY, containerSize]);
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("touchmove", handleMove);
+    };
+  }, [isDragging, mX, mY, dimensions]);
+
+  // 4. 타겟 도달 판정 (Extreme Values 수집용)
+  useEffect(() => {
+    targetIdxRef.current = targetIdx;
+    isUpdating.current = false;
+  }, [targetIdx]);
 
   useEffect(() => {
     const checkArrival = () => {
+      if (!isDragging) return;
       const currentTarget = gridPoints[targetIdxRef.current];
-      const d = Math.sqrt(Math.pow(mX.get() - currentTarget.x, 2) + Math.pow(mY.get() - currentTarget.y, 2));
+      if (!currentTarget) return;
 
-      if (d < CONFIG.ARRIVAL_THRESHOLD && !isUpdating.current && isDragging) {
+      const dist = Math.sqrt(
+        Math.pow(mX.get() - currentTarget.x, 2) + 
+        Math.pow(mY.get() - currentTarget.y, 2)
+      );
+
+      // 타겟 반경 25px 이내 진입 시
+      if (dist < 25 && !isUpdating.current) {
         isUpdating.current = true;
-        setScore(s => s + 1);
+        setScore(s => s + 1); // 점수 증가
         setTargetIdx(prev => {
           let next;
-          do { next = Math.floor(Math.random() * gridPoints.length); } while (next === prev);
+          do { next = Math.floor(Math.random() * gridPoints.length); } 
+          while (next === prev); // 이전과 같은 위치 제외
           return next;
         });
       }
     };
+    
     const unsubX = mX.on("change", checkArrival);
     const unsubY = mY.on("change", checkArrival);
     return () => { unsubX(); unsubY(); };
@@ -93,33 +134,39 @@ export default function PatternGame({ isDragging, setIsDragging, setScore }) {
     <div className="game-wrapper">
       <div 
         ref={containerRef}
-        className={`pattern-container ${isDragging ? 'active' : ''}`}
+        className="pattern-container"
         style={{ 
-            width: containerSize, 
-            height: containerSize, 
-            position: 'relative',
-            overflow: 'hidden' // 시각적으로도 공이 삐져나가지 않게 함
+            width: dimensions.size, 
+            height: dimensions.size, 
+            position: 'relative'
         }}
       >
+        {/* 그리드 점들과 타겟 표시 */}
         {gridPoints.map((point, i) => (
-          <div key={i} className={`grid-dot ${i === targetIdx ? 'is-target' : ''}`} style={{ left: point.x, top: point.y, position: 'absolute' }}>
-            {i === targetIdx && <motion.div layoutId="pulse" className="target-pulse" />}
+          <div 
+            key={i} 
+            className={`grid-dot ${i === targetIdx ? 'is-target' : ''}`} 
+            style={{ left: point.x, top: point.y, position: 'absolute' }}
+          >
+            {i === targetIdx && (
+              <motion.div layoutId="pulse" className="target-pulse" />
+            )}
           </div>
         ))}
 
+        {/* 플레이어 공: 토글 모드이므로 직접적인 이벤트는 꺼둠 */}
         <motion.div
           className="player-ball"
-          onMouseDown={(e) => {
-            if (e.button === 0) {
-              e.stopPropagation();
-              setIsDragging(prev => !prev); // 클릭 토글
-            }
+          style={{ 
+            x: mX, y: mY, 
+            left: -18, top: -18, // 반지름 보정
+            position: 'absolute',
+            pointerEvents: 'none', // 부모의 onClick 방해 금지
+            backgroundColor: isDragging ? "#007bff" : "#adb5bd"
           }}
-          style={{ x: mX, y: mY, left: -20, top: -20, position: 'absolute' }}
           animate={{ 
-            scale: isDragging ? 1 : 1.1,
-            backgroundColor: isDragging ? "#007bff" : "#dee2e6",
-            boxShadow: isDragging ? "0 8px 20px rgba(0, 123, 255, 0.3)" : "0 4px 10px rgba(0,0,0,0.05)"
+            scale: isDragging ? 1 : 0.8,
+            opacity: isDragging ? 1 : 0.5
           }}
         />
       </div>
