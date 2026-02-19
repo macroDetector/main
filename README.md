@@ -56,7 +56,7 @@ Detection Logic
 ### 📦 Libray 지원
 
 ```
-pip install git+https://github.com/qqqqaqaqaqq/mouseMacroLibrary.git
+pip install git+https://github.com/macroDetector/Library.git
 ```
 
 ---
