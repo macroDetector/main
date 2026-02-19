@@ -14,6 +14,7 @@ Detection Logic
 
 ## 🚀 Macro Detector Update (Ver 0.0.7)
 * **지표 변경 추가** : 기록기 필터링
+* **Front 오류 수정** : 정전기로 인한 point 증가 수정
 
 ## 🚀 Macro Detector Update (Ver 0.0.6)
 * **손실 함수 최적화:** **MSE**로 재 변경

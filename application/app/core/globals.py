@@ -43,7 +43,7 @@ dim_feedforward = settings.dim_feedforward
 
 weight_threshold = settings.weight_threshold
 
-filter_tolerance = tolerance * 50
+filter_tolerance = tolerance * 2000 # 2초로 변경
 offset = 0
 scale_array = 10
 
