@@ -1,36 +1,64 @@
-import React, { useMemo } from "react";
-import "./styles/drawing_canvas.scss";
+import React, { useState, useEffect } from "react";
 
-export default function SimpleDrawing({ isDragging, record }) {
-    // 수집된 데이터를 SVG 경로로 변환
-    const linePath = useMemo(() => {
-        if (record.length === 0) return "";
-        return record.reduce((path, pt, i) => {
-            return i === 0 ? `M ${pt.x} ${pt.y}` : `${path} L ${pt.x} ${pt.y}`;
-        }, "");
-    }, [record]);
+export default function SimpleDrawing({ isDragging, setScore }) {
+
+    const [currentPath, setCurrentPath] = useState("");
+
+    useEffect(() => {
+
+        if (!isDragging) {
+            setCurrentPath("");
+        }
+
+    }, [isDragging]);
+
+    const handleMouseMove = (e) => {
+
+        if (!isDragging) return;
+
+        const rect = e.currentTarget.getBoundingClientRect();
+
+        const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+        const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+
+        const newPoint = `${x},${y}`;
+
+        if (currentPath === "") {
+            setCurrentPath(`M ${newPoint}`);
+        } else {
+            setCurrentPath(prev => `${prev} L ${newPoint}`);
+            setScore(prev => prev + 1);
+        }
+
+    };
 
     return (
-        <div className="drawing-canvas-container">
-            {/* 가이드 텍스트: 필기체로 human 표시 */}
-            <div className="text-guide-layer">human</div>
+        <div
+            className="drawing-container"
+            onMouseMove={handleMouseMove}
+            onTouchMove={handleMouseMove}
+            style={{
+                width: '100%',
+                height: '100%',
+                cursor: 'crosshair'
+            }}
+        >
 
-            <svg className="drawing-svg-layer" width="100%" height="100%">
-                <path 
-                    d={linePath} 
-                    fill="none" 
-                    stroke="#61c9aa" 
-                    strokeWidth="5" 
-                    strokeLinecap="round" 
+            <svg width="100%" height="100%">
+                <path
+                    d={currentPath}
+                    fill="transparent"
+                    stroke="#4facfe"
+                    strokeWidth="3"
+                    strokeLinecap="round"
                     strokeLinejoin="round"
                 />
             </svg>
 
-            {!isDragging && record.length === 0 && (
-                <div className="onboarding-hint">
-                    가이드를 따라 <b>human</b>을 써주세요
-                </div>
-            )}
+            <div className="drawing-guide">
+                자유롭게 선을 그려 데이터를 수집하세요
+            </div>
+
         </div>
     );
 }

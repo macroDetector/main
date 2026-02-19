@@ -29,7 +29,7 @@ $text-muted: #adb5bd;
 
   @media (max-width: 480px) { padding: 1rem; width: calc(100% - 1rem); }
 
-  // 1. 모드 선택 버튼 (추가된 부분)
+  // 1. 모드 선택 버튼
   .mode-selector {
     display: inline-flex;
     background: #eee;
@@ -39,12 +39,12 @@ $text-muted: #adb5bd;
     width: fit-content;
 
     button {
-      padding: 10px 24px;
+      padding: 10px 20px; // 버튼이 3개가 되므로 좌우 패딩 소폭 조절
       border-radius: 12px;
       border: none;
       background: transparent;
       cursor: pointer;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       font-weight: 800;
       color: #999;
       text-transform: uppercase;
@@ -62,6 +62,7 @@ $text-muted: #adb5bd;
     }
   }
 
+  // 로딩 오버레이
   .loading-overlay {
     position: absolute; top: 0; left: 0; right: 0; bottom: 0;
     background: rgba($card-bg, 0.85); backdrop-filter: blur(10px);
@@ -78,44 +79,54 @@ $text-muted: #adb5bd;
     &.blur { filter: blur(6px); opacity: 0.5; pointer-events: none; transform: scale(0.97); }
   }
 
+  // 상단 스탯 헤더
   .security-header {
     display: flex; gap: 0.5rem; margin-bottom: 1.5rem; width: 100%;
     .stat-box {
       background: $card-bg; padding: 0.8rem 0.2rem; border-radius: 12px; border: 1px solid #eee;
       flex: 1; text-align: center; position: relative; overflow: hidden;
+      
       .label { display: block; font-size: 0.6rem; color: $text-muted; font-weight: 700; margin-bottom: 0.2rem; }
       .value { font-size: 1.1rem; font-weight: 900; color: $text-main; }
+
+      &.highlighted {
+        .progress-bar {
+          position: absolute; bottom: 0; left: 0; width: 100%; height: 4px; background: #f1f3f5;
+          .fill { height: 100%; background: $primary-color; transition: width 0.3s ease; }
+        }
+      }
     }
   }
 
+  // 메인 게임 영역
   .security-area {
     background: $card-bg; border: 1px solid #eee; border-radius: 20px;
     width: 100%; aspect-ratio: 1 / 1;
     touch-action: none !important; overflow: hidden; position: relative;
     display: flex; justify-content: center; align-items: center;
     cursor: pointer;
-  }
 
-  // 각 게임별 내부 레이아웃 유지
-  .game-wrapper, .circular-unlock-wrapper {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
+    // Drawing 모드 전용 스타일
+    .drawing-container {
+      width: 100%; height: 100%; position: relative;
+      
+      svg {
+        width: 100%; height: 100%;
+        path {
+          filter: drop-shadow(0 0 2px rgba($primary-color, 0.3));
+        }
+      }
 
-  .pattern-container {
-    .grid-dot {
-      width: 18px; height: 18px; background: #f1f3f5; border-radius: 50%; transform: translate(-50%, -50%);
-      &.is-target { background: $success-color; box-shadow: 0 0 15px rgba($success-color, 0.4); z-index: 2; }
+      .drawing-guide {
+        position: absolute; top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        color: #eee; font-size: 0.9rem; font-weight: 600;
+        pointer-events: none; opacity: 0.8;
+      }
     }
-    .player-ball {
-      width: 36px; height: 36px; border-radius: 50%; z-index: 10; border: 3px solid #fff;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      pointer-events: none;
-    }
   }
 
+  // 하단 패널
   .security-panel {
     margin-top: 1.2rem; text-align: center;
     .status-indicator {
@@ -126,7 +137,6 @@ $text-muted: #adb5bd;
       }
       span { font-size: 0.75rem; font-weight: 700; color: #666; }
     }
-    .hint { font-size: 0.65rem; color: #bbb; margin-top: 0.5rem; line-height: 1.4; word-break: keep-all; }
   }
 }
 

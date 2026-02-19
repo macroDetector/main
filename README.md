@@ -12,6 +12,9 @@ Detection Logic
 
 ## 정식 1.0.0 버전 출시 전까지 기능 개선 및 안정화를 위해 빈번한 업데이트가 진행될 예정입니다.
 
+## 🚀 Macro Detector Update (Ver 0.0.7)
+* **지표 변경 추가** : 기록기 필터링
+
 ## 🚀 Macro Detector Update (Ver 0.0.6)
 * **손실 함수 최적화:** **MSE**로 재 변경
 * **지표 변경** : 평균 STD 제거 및 가우시안 꼬리 지표 추가

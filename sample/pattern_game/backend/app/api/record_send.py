@@ -10,31 +10,31 @@ from scipy import stats
 
 router = APIRouter()
 
-SAVE_DIR = os.path.join(os.getcwd(), "data", "captured_movements")
-if not os.path.exists(SAVE_DIR):
-    os.makedirs(SAVE_DIR, exist_ok=True)
+# SAVE_DIR = os.path.join(os.getcwd(), "data", "captured_movements")
+# if not os.path.exists(SAVE_DIR):
+#     os.makedirs(SAVE_DIR, exist_ok=True)
 
 @router.post("/get_points")
 async def get_mouse_pointer(data: List[MousePoint]):   
-    try:
-        json_ready_data = [
-            {
-                "timestamp": p.timestamp.isoformat(),
-                "x": p.x,
-                "y": p.y,
-                "deltatime": p.deltatime
-            } 
-            for p in data
-        ]
+    # try:
+    #     json_ready_data = [
+    #         {
+    #             "timestamp": p.timestamp.isoformat(),
+    #             "x": p.x,
+    #             "y": p.y,
+    #             "deltatime": p.deltatime
+    #         } 
+    #         for p in data
+    #     ]
 
-        timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-        file_path = os.path.join(SAVE_DIR, f"move_{timestamp_str}.json")
+    #     timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    #     file_path = os.path.join(SAVE_DIR, f"move_{timestamp_str}.json")
 
-        with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(json_ready_data, f, ensure_ascii=False, indent=4)
+    #     with open(file_path, "w", encoding="utf-8") as f:
+    #         json.dump(json_ready_data, f, ensure_ascii=False, indent=4)
             
-    except Exception as e:
-        print(f"❌ 데이터 저장 실패: {e}")
+    # except Exception as e:
+    #     print(f"❌ 데이터 저장 실패: {e}")
 
     # print(data)
     result:ResponseBody = Pattern_Game().get_macro_result(data)
