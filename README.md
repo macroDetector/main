@@ -12,9 +12,10 @@ Detection Logic
 
 ## 정식 1.0.0 버전 출시 전까지 기능 개선 및 안정화를 위해 빈번한 업데이트가 진행될 예정입니다.
 
-## 🚀 Macro Detector Update (Ver 0.0.7)
+## 🚀 Macro Detector Update
 * **지표 변경 추가** : 기록기 필터링
 * **Front 오류 수정** : 정전기로 인한 point 증가 수정
+* **Front** : 2초 동안 픽셀 이동 없을 시 초기화, 모바일 - 터치 떄질 시 즉시 초기화
 
 ## 🚀 Macro Detector Update (Ver 0.0.6)
 * **손실 함수 최적화:** **MSE**로 재 변경
